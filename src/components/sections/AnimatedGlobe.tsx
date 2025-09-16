@@ -45,18 +45,18 @@ const AnimatedGlobe: React.FC = () => {
             draggable={false}
           />
 
-          {/* City markers duplicated for seamless loop */}
-          <CityPin x={82} y={40} label="Tokyo" offsetPct={0} />
-          <CityPin x={82} y={40} label="Tokyo" offsetPct={50} />
+          {/* City markers with correct geographical positions */}
+          <CityPin x={88} y={38} label="Tokyo" offsetPct={0} />
+          <CityPin x={88} y={38} label="Tokyo" offsetPct={50} />
 
-          <CityPin x={56} y={30} label="Berlin" offsetPct={0} />
-          <CityPin x={56} y={30} label="Berlin" offsetPct={50} />
+          <CityPin x={54} y={32} label="Berlin" offsetPct={0} />
+          <CityPin x={54} y={32} label="Berlin" offsetPct={50} />
 
-          <CityPin x={12} y={45} label="San Francisco" offsetPct={0} />
-          <CityPin x={12} y={45} label="San Francisco" offsetPct={50} />
+          <CityPin x={16} y={40} label="San Francisco" offsetPct={0} />
+          <CityPin x={16} y={40} label="San Francisco" offsetPct={50} />
 
-          <CityPin x={38} y={70} label="Buenos Aires" offsetPct={0} />
-          <CityPin x={38} y={70} label="Buenos Aires" offsetPct={50} />
+          <CityPin x={29} y={68} label="Buenos Aires" offsetPct={0} />
+          <CityPin x={29} y={68} label="Buenos Aires" offsetPct={50} />
         </div>
 
         {/* Atmosphere and specular highlight */}
