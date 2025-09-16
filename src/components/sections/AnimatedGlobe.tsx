@@ -32,7 +32,7 @@ const AnimatedGlobe: React.FC = () => {
       {/* Globe base with actual Earth map */}
       <div className="absolute inset-0 rounded-full overflow-hidden shadow-2xl bg-blue-500">
         {/* World map image */}
-        <div className="absolute inset-0 animate-spin-slow">
+        <div className="absolute inset-0 animate-spin-earth">
           <img 
             src={worldMap} 
             alt="World Map" 

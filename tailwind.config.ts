@@ -107,6 +107,10 @@ export default {
 				'spin-slow': {
 					from: { transform: 'rotate(0deg)' },
 					to: { transform: 'rotate(360deg)' }
+				},
+				'spin-earth': {
+					from: { transform: 'rotate(0deg)' },
+					to: { transform: 'rotate(-360deg)' }
 				}
 			},
 			animation: {
@@ -118,7 +122,8 @@ export default {
 				'scale-out': 'scale-out 0.2s ease-out',
 				'slide-in-right': 'slide-in-right 0.3s ease-out',
 				'slide-out-right': 'slide-out-right 0.3s ease-out',
-				'spin-slow': 'spin-slow 12s linear infinite'
+				'spin-slow': 'spin-slow 12s linear infinite',
+				'spin-earth': 'spin-earth 20s linear infinite'
 			}
 		}
 	},
