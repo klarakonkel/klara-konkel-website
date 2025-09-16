@@ -111,6 +111,10 @@ export default {
 				'spin-earth': {
 					from: { transform: 'rotate(0deg)' },
 					to: { transform: 'rotate(-360deg)' }
+				},
+				'earth-scroll': {
+					from: { transform: 'translateX(0%)' },
+					to: { transform: 'translateX(-50%)' }
 				}
 			},
 			animation: {
@@ -123,7 +127,8 @@ export default {
 				'slide-in-right': 'slide-in-right 0.3s ease-out',
 				'slide-out-right': 'slide-out-right 0.3s ease-out',
 				'spin-slow': 'spin-slow 12s linear infinite',
-				'spin-earth': 'spin-earth 20s linear infinite'
+				'spin-earth': 'spin-earth 20s linear infinite',
+				'earth-scroll': 'earth-scroll 24s linear infinite'
 			}
 		}
 	},

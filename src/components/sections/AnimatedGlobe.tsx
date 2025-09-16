@@ -2,59 +2,70 @@ import React from "react";
 import worldMap from "@/assets/world-map.png";
 
 interface CityPinProps {
-  x: number; // percentage from left
-  y: number; // percentage from top
+  x: number; // 0-100 across a single map copy
+  y: number; // 0-100 top to bottom
   label: string;
+  offsetPct?: number; // 0 for first copy, 50 for second
 }
 
-const CityPin: React.FC<CityPinProps> = ({ x, y, label }) => {
-  return (
-    <div 
-      className="absolute z-10 transform -translate-x-1/2 -translate-y-1/2"
-      style={{ left: `${x}%`, top: `${y}%` }}
-    >
-      <div className="flex items-center gap-2 group">
-        <div className="relative">
-          <span className="h-3 w-3 rounded-full bg-red-500 shadow-lg border-2 border-white animate-pulse"></span>
-          <span className="absolute inset-0 h-3 w-3 rounded-full bg-red-500/50 animate-ping"></span>
-        </div>
-        <span className="text-xs font-medium text-white bg-black/80 px-2 py-1 rounded-md shadow-sm backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-          {label}
-        </span>
+const CityPin: React.FC<CityPinProps> = ({ x, y, label, offsetPct = 0 }) => (
+  <div
+    className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
+    style={{ left: `${offsetPct + x / 2}%`, top: `${y}%` }}
+  >
+    <div className="flex items-center gap-2 group">
+      <div className="relative">
+        <span className="h-3 w-3 rounded-full bg-accent border-2 border-background shadow-[var(--shadow-glow)] animate-pulse"></span>
+        <span className="absolute inset-0 h-3 w-3 rounded-full bg-accent/40 animate-ping"></span>
       </div>
+      <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-1 rounded-md shadow-sm backdrop-blur-sm border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+        {label}
+      </span>
     </div>
-  );
-};
+  </div>
+);
 
 const AnimatedGlobe: React.FC = () => {
   return (
     <div className="relative mx-auto h-72 w-72 md:h-96 md:w-96">
-      {/* Globe base with actual Earth map */}
-      <div className="absolute inset-0 rounded-full overflow-hidden shadow-2xl bg-blue-500">
-        {/* World map image */}
-        <div className="absolute inset-0 animate-spin-earth">
-          <img 
-            src={worldMap} 
-            alt="World Map" 
-            className="w-full h-full object-cover rounded-full"
+      <div className="absolute inset-0 rounded-full overflow-hidden shadow-[var(--shadow-elegant)] ring-1 ring-border bg-background">
+        {/* Moving strip: two copies of the world map to create seamless eastward spin */}
+        <div className="absolute inset-0 relative w-[200%] h-full flex animate-earth-scroll">
+          <img
+            src={worldMap}
+            alt="World map equirectangular"
+            className="h-full w-1/2 object-cover"
+            draggable={false}
           />
-          
-          {/* City markers on top of the map */}
-          <CityPin x={56} y={30} label="Berlin" />
-          <CityPin x={87} y={38} label="Tokyo" />
-          <CityPin x={18} y={42} label="San Francisco" />
-          <CityPin x={40} y={70} label="Buenos Aires" />
+          <img
+            src={worldMap}
+            alt=""
+            aria-hidden
+            className="h-full w-1/2 object-cover"
+            draggable={false}
+          />
+
+          {/* City markers duplicated for seamless loop */}
+          <CityPin x={82} y={40} label="Tokyo" offsetPct={0} />
+          <CityPin x={82} y={40} label="Tokyo" offsetPct={50} />
+
+          <CityPin x={56} y={30} label="Berlin" offsetPct={0} />
+          <CityPin x={56} y={30} label="Berlin" offsetPct={50} />
+
+          <CityPin x={12} y={45} label="San Francisco" offsetPct={0} />
+          <CityPin x={12} y={45} label="San Francisco" offsetPct={50} />
+
+          <CityPin x={38} y={70} label="Buenos Aires" offsetPct={0} />
+          <CityPin x={38} y={70} label="Buenos Aires" offsetPct={50} />
         </div>
-        
-        {/* Atmospheric glow effect */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/20 via-transparent to-blue-600/20 pointer-events-none"></div>
-        
-        {/* Subtle highlight on the sphere */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"></div>
+
+        {/* Atmosphere and specular highlight */}
+        <div className="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-br from-primary/20 via-transparent to-accent/20"></div>
+        <div className="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent mix-blend-multiply"></div>
       </div>
-      
-      {/* Outer atmospheric glow */}
-      <div className="absolute -inset-1 rounded-full bg-blue-400/30 blur-md"></div>
+
+      {/* Outer glow */}
+      <div className="absolute -inset-1 rounded-full bg-primary/30 blur-md pointer-events-none"></div>
     </div>
   );
 };
