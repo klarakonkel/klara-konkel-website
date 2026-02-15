@@ -21,7 +21,7 @@ const roles = [
 
 const Experience = () => {
   return (
-    <section id="experience" className="container py-16 md:py-24">
+    <section id="experience" className="container py-6 md:py-8">
       <h2 className="text-3xl font-bold tracking-tight">Experience</h2>
       <ol className="mt-8 relative border-l pl-6">
         {roles.map((r) => (

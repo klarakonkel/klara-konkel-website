@@ -16,7 +16,7 @@ const Contact = () => {
   };
 
   return (
-    <section id="contact" className="container py-16 md:py-24">
+    <section id="contact" className="container py-6 md:py-8">
       <div className="max-w-2xl">
         <h2 className="text-3xl font-bold tracking-tight">Let’s build something impactful together.</h2>
         <p className="mt-2 text-muted-foreground">

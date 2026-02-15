@@ -22,7 +22,7 @@ const skills = {
 
 const Skills = () => {
   return (
-    <section id="skills" className="container py-16 md:py-24">
+    <section id="skills" className="container py-6 md:py-8">
       <h2 className="text-3xl font-bold tracking-tight">Skills</h2>
       <div className="mt-8 grid gap-8 md:grid-cols-2">
         {Object.entries(skills).map(([group, items]) => (

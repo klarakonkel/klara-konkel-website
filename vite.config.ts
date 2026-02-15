@@ -1,19 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
-
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+// Vite configuration for localhost development
+export default defineConfig(() => ({
   server: {
-    host: "::",
-    port: 8080,
+    host: "localhost",
+    port: 5173,
+    open: true, // Automatically open browser
   },
-  plugins: [
-    react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+  plugins: [react()], // Streamlined for local development
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
