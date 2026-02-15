@@ -34,6 +34,9 @@ jobs:
         env:
           VITE_BASE_URL: /${{ github.event.repository.name }}/
 
+      - name: Copy index to 404 for SPA routing
+        run: cp dist/index.html dist/404.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
