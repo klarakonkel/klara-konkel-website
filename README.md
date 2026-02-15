@@ -43,12 +43,21 @@ This project is built with:
 
 ## 📦 Deployment
 
-The project can be deployed to any static hosting service:
+### GitHub Pages (recommended)
 
-- **Vercel**: Connect your GitHub repository for automatic deployments
-- **Netlify**: Drag and drop the `dist` folder after running `npm run build`
-- **GitHub Pages**: Use GitHub Actions for automated deployment
-- **Any static host**: Upload the contents of `dist` folder
+The repo is set up to deploy automatically on push to `main`:
+
+1. In your GitHub repo go to **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Push to `main`; the workflow builds the site and deploys it.
+4. The site will be at `https://<username>.github.io/<repo-name>/`.
+
+Local builds use base `/`. The workflow sets `VITE_BASE_URL` so assets and routes work on GitHub Pages.
+
+### Other hosts
+
+- **Vercel / Netlify**: Connect the repo or upload the `dist` folder after `npm run build`.
+- **Any static host**: Upload the contents of `dist`.
 
 ## 🎯 Performance Features
 
