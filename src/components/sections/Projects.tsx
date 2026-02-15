@@ -13,6 +13,7 @@ type Project = {
   imageUrl: string;
   codeUrl: string;
   previewPdfUrl?: string;
+  codePrivate?: boolean;
 };
 
 const projects: Project[] = [
@@ -23,7 +24,8 @@ const projects: Project[] = [
     videoUrl: "",
     imageUrl: "/slack%20bot%20preview.png",
     previewPdfUrl: "/slack%20bot%20demo%20canva.pdf",
-    codeUrl: "https://github.com/klarakonkel/overdue-invoice-reminders.git"
+    codeUrl: "https://github.com/klarakonkel/overdue-invoice-reminders.git",
+    codePrivate: true
   },
   {
     title: "Gmail Inbox Automation",
@@ -31,7 +33,8 @@ const projects: Project[] = [
     stack: ["n8n", "Gmail API", "Automation", "Email Processing", "Finance Integration"],
     videoUrl: "",
     imageUrl: "/n8n inbox logic.png",
-    codeUrl: "https://github.com/yourusername/gmail-inbox-automation"
+    codeUrl: "https://github.com/yourusername/gmail-inbox-automation",
+    codePrivate: true
   },
   {
     title: "Context - cultural translation",
@@ -185,10 +188,24 @@ const Projects = () => {
                       <Badge key={tech} variant="secondary">{tech}</Badge>
                     ))}
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => window.open(centerProject.codeUrl, "_blank")} className="shrink-0">
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    See Code
-                  </Button>
+                  {centerProject.codePrivate ? (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="shrink-0">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          See Code
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm">
+                        <p className="text-sm text-muted-foreground">This project is private. Hit me up for a sanitized version!</p>
+                      </DialogContent>
+                    </Dialog>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => window.open(centerProject.codeUrl, "_blank")} className="shrink-0">
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      See Code
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
