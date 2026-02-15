@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { getPublicUrl } from "@/lib/utils";
 import { Github, Linkedin, Download } from "lucide-react";
 import AnimatedGlobe from "./AnimatedGlobe";
 
@@ -7,7 +8,7 @@ const Hero = () => {
     <section id="home" className="container grid gap-10 py-6 md:py-8 lg:grid-cols-[1.6fr_1fr] items-start">
       <div className="flex flex-row gap-6 animate-fade-in">
         <img
-          src="/klara%20photo.jpg"
+          src={getPublicUrl("/klara%20photo.jpg")}
           alt="Klara Konkel"
           className="h-32 w-32 md:h-40 md:w-40 shrink-0 rounded-full object-cover border-2 border-border"
         />
@@ -40,7 +41,7 @@ const Hero = () => {
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3">
             <Button asChild variant="hero">
-              <a href="/resume.pdf" download>
+              <a href={getPublicUrl("/resume.pdf")} download>
                 <Download className="mr-2" /> Download Resume
               </a>
             </Button>

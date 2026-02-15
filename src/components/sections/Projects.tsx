@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { getPublicUrl } from "@/lib/utils";
 import { ExternalLink, Expand, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Project = {
@@ -59,17 +60,17 @@ const renderProjectPreview = (project: Project) => {
     return (
       <Dialog>
         <DialogTrigger className="relative group w-full h-full cursor-pointer">
-          <img src={project.imageUrl} alt={`${project.title} preview`} className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
+          <img src={getPublicUrl(project.imageUrl)} alt={`${project.title} preview`} className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
             <Expand className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
           </div>
         </DialogTrigger>
         <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <div className="flex-1 min-h-0 overflow-auto p-4 pb-2">
-            <embed src={`${project.previewPdfUrl}#toolbar=1&navpanes=1&scrollbar=1`} type="application/pdf" className="w-full min-h-[80vh] rounded-lg border border-border" title={`${project.title} preview`} />
+            <embed src={`${getPublicUrl(project.previewPdfUrl!)}#toolbar=1&navpanes=1&scrollbar=1`} type="application/pdf" className="w-full min-h-[80vh] rounded-lg border border-border" title={`${project.title} preview`} />
           </div>
           <div className="shrink-0 border-t bg-muted/30 px-4 py-2 rounded-b-lg">
-            <a href={project.previewPdfUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">Open in new tab (if preview doesn’t load)</a>
+            <a href={getPublicUrl(project.previewPdfUrl!)} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">Open in new tab (if preview doesn’t load)</a>
           </div>
         </DialogContent>
       </Dialog>
@@ -79,13 +80,13 @@ const renderProjectPreview = (project: Project) => {
     return (
       <Dialog>
         <DialogTrigger className="relative group w-full h-full cursor-pointer">
-          <img src={project.imageUrl} alt={`${project.title} diagram`} className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
+          <img src={getPublicUrl(project.imageUrl)} alt={`${project.title} diagram`} className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
             <Expand className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
           </div>
         </DialogTrigger>
         <DialogContent className="max-w-4xl w-full p-0">
-          <img src={project.imageUrl} alt={`${project.title} diagram`} className="w-full h-auto rounded-lg" />
+          <img src={getPublicUrl(project.imageUrl)} alt={`${project.title} diagram`} className="w-full h-auto rounded-lg" />
         </DialogContent>
       </Dialog>
     );
@@ -100,10 +101,10 @@ const renderProjectPreview = (project: Project) => {
         </DialogTrigger>
         <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <div className="flex-1 min-h-0 overflow-auto p-4 pb-2">
-            <embed src={`${project.previewPdfUrl}#toolbar=1&navpanes=1&scrollbar=1`} type="application/pdf" className="w-full min-h-[80vh] rounded-lg border border-border" title={`${project.title} preview`} />
+            <embed src={`${getPublicUrl(project.previewPdfUrl!)}#toolbar=1&navpanes=1&scrollbar=1`} type="application/pdf" className="w-full min-h-[80vh] rounded-lg border border-border" title={`${project.title} preview`} />
           </div>
           <div className="shrink-0 border-t bg-muted/30 px-4 py-2 rounded-b-lg">
-            <a href={project.previewPdfUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">Open in new tab (if preview doesn’t load)</a>
+            <a href={getPublicUrl(project.previewPdfUrl!)} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">Open in new tab (if preview doesn’t load)</a>
           </div>
         </DialogContent>
       </Dialog>
@@ -125,7 +126,7 @@ const SideCard = ({ project }: { project: Project }) => (
     <CardContent className="space-y-2">
       <div className="relative aspect-video w-full rounded-md overflow-hidden bg-muted">
         {project.imageUrl ? (
-          <img src={project.imageUrl} alt="" className="w-full h-full object-cover" />
+          <img src={getPublicUrl(project.imageUrl)} alt="" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-accent/20">
             <span className="text-muted-foreground text-xs">Preview</span>
