@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { getPublicUrl } from "@/lib/utils";
 import { Github, Linkedin, Download } from "lucide-react";
 import AnimatedGlobe from "./AnimatedGlobe";
+import { GlobeErrorBoundary } from "./GlobeErrorBoundary";
 
 const Hero = () => {
   return (
@@ -37,7 +38,16 @@ const Hero = () => {
         </div>
       </div>
       <div className="animate-scale-in flex flex-col gap-6 -mt-4">
-        <AnimatedGlobe />
+        <GlobeErrorBoundary
+          fallback={
+            <div
+              className="mx-auto h-48 w-48 md:h-56 md:w-56 rounded-full bg-muted/40 border border-border"
+              aria-hidden
+            />
+          }
+        >
+          <AnimatedGlobe />
+        </GlobeErrorBoundary>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3">
             <Button asChild variant="hero">
