@@ -31,7 +31,7 @@ const Hero = () => {
             At my uni, I am studying in a different country (on a different continent!) every year, because in order to lead the world, you have to experience the world.
           </p>
           <p>
-            In how I think, build, and lead, I am driven by my core values: independence, freedom, and ownership. I take initiative, move fast, and deliver measurable results, from scaling global events to deploying technical solutions in production. I enjoy building systems and products that solve real problems. Currently working on automations.
+            In how I think, build, and lead, I am driven by my core values: autonomy and ownership. I take initiative, move fast, and deliver measurable results, from scaling global events to deploying technical solutions in production. I enjoy building systems and products that solve real problems. Currently working on automations.
           </p>
         </div>
         </div>
