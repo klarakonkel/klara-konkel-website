@@ -49,6 +49,9 @@ const Contact = () => {
 
         <div className="relative overflow-hidden rounded-lg border bg-card">
           <img src={worldMap} alt="Minimal world map for contact — based in San Francisco, working globally" loading="lazy" className="w-full h-56 object-cover" />
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute left-[18%] top-[35%] h-3 w-3 rounded-full bg-accent shadow-[var(--shadow-glow)]" title="San Francisco" />
+          </div>
           <p className="p-4 text-sm text-muted-foreground">
             Based in <span className="line-through">San Francisco</span>, working globally.
           </p>
