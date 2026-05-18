@@ -113,24 +113,28 @@ All colors MUST be HSL.
   }
 }
 
-/* ── Espresso machine panel layout ── */
+/* ── Espresso machine panel — fixed top-left accent ── */
 .espresso-panel {
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px;
+  width: 110px;
+  /* Tall enough for the SVG stream to paint well below viewport */
   height: 100vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
   pointer-events: none;
-  z-index: 40;
+  /* Above page content, below sticky navbar (z-50) */
+  z-index: 45;
   overflow: visible;
-  padding-top: calc(50vh - 160px);
+}
+
+/* Stream is subtle — slightly transparent so page content reads over it */
+.espresso-panel svg {
+  opacity: 0.88;
 }
 
 .espresso-content {
-  margin-left: 220px;
+  /* Slight nudge so the portafilter doesn't overlap the nav logo */
+  padding-left: 90px;
 }
 
 @media (max-width: 900px) {
@@ -138,7 +142,7 @@ All colors MUST be HSL.
     display: none;
   }
   .espresso-content {
-    margin-left: 0;
+    padding-left: 0;
   }
 }
 
