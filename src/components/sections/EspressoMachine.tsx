@@ -1,312 +1,345 @@
 import { useEffect, useRef } from "react";
 
-const STREAM_LENGTH = 2400;
-const GROWTH_RATIO = 2.2;
-const MAX_GROWTH_PER_FRAME = 18;
-const STOP_DELAY = 150;
+/*
+ * Real espresso stream physics:
+ * - Two streams from a double-spout portafilter converge into one "mouse tail"
+ * - First 1-2 seconds: brilliant golden-amber crema at the top
+ * - As the shot progresses the stream darkens to espresso brown
+ * - The stream has a slight organic wobble — not perfectly straight
+ * - Stream STOPS instantly when pouring stops (no coasting)
+ *
+ * Technique: stroke-dashoffset reveal. dashOffset is ONLY modified inside the
+ * scroll handler, so the stream is frozen the moment scrolling ceases.
+ */
+
+const GROWTH_RATIO = 2.0; // SVG units revealed per px of scroll
+
+// Main stream path — starts at left spout (38,90), convergence by y≈140,
+// then a gentle oscillating descent all the way to y≈2620.
+const MAIN_D = `
+  M 38 90
+  C 36 106 40 118 43 128
+  C 45 133 46 136 47 140
+  C 47 150 45 165 43 182
+  C 41 199 45 216 47 230
+  C 49 244 51 260 49 276
+  C 47 292 43 308 43 322
+  C 43 336 47 354 49 368
+  C 51 382 51 398 49 412
+  C 47 426 43 442 43 456
+  C 43 470 47 488 49 502
+  C 51 516 51 532 49 546
+  C 47 560 43 576 43 590
+  C 43 604 47 622 49 636
+  C 51 650 51 666 49 680
+  C 47 694 43 710 43 724
+  C 43 738 47 756 49 770
+  C 51 784 51 800 49 814
+  C 47 828 43 844 43 858
+  C 43 872 47 890 49 904
+  C 51 918 51 934 49 948
+  C 47 962 43 978 43 992
+  C 43 1006 47 1024 49 1038
+  C 51 1052 51 1068 49 1082
+  C 47 1096 43 1112 43 1126
+  C 43 1140 47 1158 49 1172
+  C 51 1186 51 1202 49 1216
+  C 47 1230 43 1246 43 1260
+  C 43 1274 47 1292 49 1306
+  C 51 1320 51 1336 49 1350
+  C 47 1364 43 1380 43 1394
+  C 43 1408 47 1426 49 1440
+  C 51 1454 51 1470 49 1484
+  C 47 1498 43 1514 43 1528
+  C 43 1542 47 1560 49 1574
+  C 51 1588 51 1604 49 1618
+  C 47 1632 43 1648 43 1662
+  C 43 1676 47 1694 49 1708
+  C 51 1722 51 1738 49 1752
+  C 47 1766 43 1782 43 1796
+  C 43 1810 47 1828 49 1842
+  C 51 1856 51 1872 49 1886
+  C 47 1900 43 1916 43 1930
+  C 43 1944 47 1962 49 1976
+  C 51 1990 51 2006 49 2020
+  C 47 2034 43 2050 43 2064
+  C 43 2078 47 2096 49 2110
+  C 51 2124 51 2140 49 2154
+  C 47 2168 43 2184 43 2198
+  C 43 2212 47 2230 49 2244
+  C 51 2258 51 2274 49 2288
+  C 47 2302 43 2318 43 2332
+  C 43 2346 47 2364 49 2378
+  C 51 2392 51 2408 49 2422
+  C 47 2436 43 2452 43 2466
+  C 43 2480 47 2498 49 2512
+  C 51 2526 51 2542 49 2556
+  C 47 2570 45 2582 47 2600
+`.trim();
+
+// Right spout stream — short path from right hole (62,90) converging to merge at (47,140)
+const RIGHT_D = `
+  M 62 90
+  C 64 106 60 118 57 128
+  C 55 133 51 136 47 140
+`.trim();
 
 export default function EspressoMachine() {
-  const streamRef = useRef<SVGPathElement>(null);
-  const highlightRef = useRef<SVGPathElement>(null);
-  const dripRef = useRef<SVGCircleElement>(null);
-  const cupFillRef = useRef<SVGRectElement>(null);
+  const mainRef    = useRef<SVGPathElement>(null);
+  const cremaRef   = useRef<SVGPathElement>(null);
+  const rightRef   = useRef<SVGPathElement>(null);
+  const rightCrRef = useRef<SVGPathElement>(null);
 
   useEffect(() => {
-    let dashOffset = STREAM_LENGTH;
-    let targetOffset = STREAM_LENGTH;
+    const main    = mainRef.current;
+    const crema   = cremaRef.current;
+    const right   = rightRef.current;
+    const rightCr = rightCrRef.current;
+    if (!main) return;
+
+    // Measure real path lengths so dasharray is exact
+    const mainLen  = main.getTotalLength();
+    const rightLen = right ? right.getTotalLength() : 0;
+
+    let mainOffset  = mainLen;
+    let rightOffset = rightLen;
     let lastScrollY = window.scrollY;
     let rafId: number;
-    let stopTimer: ReturnType<typeof setTimeout>;
-    let isPouring = false;
 
-    const stream = streamRef.current;
-    const highlight = highlightRef.current;
-    const drip = dripRef.current;
-    const cupFill = cupFillRef.current;
+    const setDash = (el: SVGPathElement | null, arr: number, off: number) => {
+      if (!el) return;
+      el.style.strokeDasharray  = `${arr}`;
+      el.style.strokeDashoffset = `${off}`;
+    };
 
-    if (!stream || !highlight) return;
-
-    stream.style.strokeDasharray = `${STREAM_LENGTH}`;
-    stream.style.strokeDashoffset = `${STREAM_LENGTH}`;
-    highlight.style.strokeDasharray = `${STREAM_LENGTH}`;
-    highlight.style.strokeDashoffset = `${STREAM_LENGTH}`;
-
-    function setPouring(v: boolean) {
-      isPouring = v;
-      if (drip) {
-        drip.style.opacity = v ? "1" : "0.4";
-        drip.style.animationPlayState = v ? "running" : "paused";
-      }
-    }
+    setDash(main,    mainLen,  mainLen);
+    setDash(crema,   mainLen,  mainLen);
+    setDash(right,   rightLen, rightLen);
+    setDash(rightCr, rightLen, rightLen);
 
     function onScroll() {
-      const currentY = window.scrollY;
-      const delta = currentY - lastScrollY;
-      lastScrollY = currentY;
+      const y     = window.scrollY;
+      const delta = Math.abs(y - lastScrollY);
+      lastScrollY = y;
 
-      const growth = Math.min(Math.abs(delta) * GROWTH_RATIO, MAX_GROWTH_PER_FRAME);
-      targetOffset = Math.max(0, targetOffset - growth);
+      const grow = delta * GROWTH_RATIO;
+      mainOffset  = Math.max(0, mainOffset  - grow);
+      rightOffset = Math.max(0, rightOffset - grow);
 
-      setPouring(true);
-      clearTimeout(stopTimer);
-      stopTimer = setTimeout(() => setPouring(false), STOP_DELAY);
-
-      // cup fill progress — grows upward inside cup
-      if (cupFill) {
-        const progress = 1 - dashOffset / STREAM_LENGTH;
-        const maxH = 22;
-        const h = Math.min(maxH, progress * maxH * 2.5);
-        cupFill.setAttribute("height", String(h));
-        cupFill.setAttribute("y", String(30 - h));
-      }
+      // Apply immediately — no lerp, stream stops the instant scrolling does
+      setDash(main,    mainLen,  mainOffset);
+      setDash(crema,   mainLen,  mainOffset);
+      setDash(right,   rightLen, rightOffset);
+      setDash(rightCr, rightLen, rightOffset);
     }
 
+    // rAF only needed to ensure smooth 60fps DOM sync on rapid scroll
     function frame() {
-      // lerp toward target
-      dashOffset += (targetOffset - dashOffset) * 0.12;
-      if (Math.abs(dashOffset - targetOffset) < 0.2) dashOffset = targetOffset;
-
-      stream.style.strokeDashoffset = `${dashOffset}`;
-      highlight.style.strokeDashoffset = `${dashOffset}`;
-
-      // move drip to tip of visible stream
-      if (drip && isPouring) {
-        const progress = 1 - dashOffset / STREAM_LENGTH;
-        const tipY = 310 + progress * STREAM_LENGTH * 0.42;
-        drip.setAttribute("cy", String(Math.min(tipY, 310 + STREAM_LENGTH * 0.42)));
-      }
-
       rafId = requestAnimationFrame(frame);
     }
-
     window.addEventListener("scroll", onScroll, { passive: true });
     rafId = requestAnimationFrame(frame);
 
     return () => {
       window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(rafId);
-      clearTimeout(stopTimer);
     };
   }, []);
 
   return (
-    <div
-      className="espresso-panel"
-      aria-hidden="true"
-    >
+    <div className="espresso-panel" aria-hidden="true">
       <svg
-        viewBox="0 0 200 3000"
-        width="200"
-        height="3000"
+        viewBox="0 0 110 2650"
+        width="110"
         xmlns="http://www.w3.org/2000/svg"
-        style={{ overflow: "visible", display: "block" }}
+        style={{ display: "block", overflow: "visible" }}
       >
         <defs>
-          {/* Steam gradient */}
-          <linearGradient id="machineBody" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2e2e2e" />
-            <stop offset="100%" stopColor="#1a1a1a" />
+          {/* ── Chrome gradients ── */}
+          <linearGradient id="chrome1" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#6a6a6a" />
+            <stop offset="18%"  stopColor="#d8d8d8" />
+            <stop offset="36%"  stopColor="#b0b0b0" />
+            <stop offset="55%"  stopColor="#f2f2f2" />
+            <stop offset="75%"  stopColor="#c0c0c0" />
+            <stop offset="100%" stopColor="#808080" />
           </linearGradient>
-          <linearGradient id="streamGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#5a2f0f" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#7a4520" stopOpacity="1" />
-            <stop offset="100%" stopColor="#5a2f0f" stopOpacity="0.85" />
+
+          <linearGradient id="chrome2" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#505050" />
+            <stop offset="25%"  stopColor="#b8b8b8" />
+            <stop offset="50%"  stopColor="#e8e8e8" />
+            <stop offset="75%"  stopColor="#a0a0a0" />
+            <stop offset="100%" stopColor="#686868" />
           </linearGradient>
-          <linearGradient id="highlightGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#c8814a" stopOpacity="0" />
-            <stop offset="40%" stopColor="#d4935e" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#c8814a" stopOpacity="0" />
+
+          <linearGradient id="chrome3" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#888" />
+            <stop offset="40%"  stopColor="#e0e0e0" />
+            <stop offset="70%"  stopColor="#c8c8c8" />
+            <stop offset="100%" stopColor="#909090" />
           </linearGradient>
-          <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#3a3a3a" />
+
+          <linearGradient id="chromeDark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#4a4a4a" />
+            <stop offset="100%" stopColor="#282828" />
+          </linearGradient>
+
+          <radialGradient id="showerScreen" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="#555" />
+            <stop offset="60%"  stopColor="#3a3a3a" />
             <stop offset="100%" stopColor="#222" />
+          </radialGradient>
+
+          {/*
+           * ── Espresso stream gradient ──
+           * gradientUnits="userSpaceOnUse" pins colours to absolute SVG y‑coords:
+           *   y=90   →  brilliant golden crema  (first drops)
+           *   y=180  →  amber                   (crema body)
+           *   y=360  →  warm brown              (transition)
+           *   y=700+ →  dark espresso
+           */}
+          <linearGradient id="espresso" x1="0" y1="90" x2="0" y2="900"
+                          gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#F0C040" />
+            <stop offset="4%"   stopColor="#D8900A" />
+            <stop offset="12%"  stopColor="#B06818" />
+            <stop offset="28%"  stopColor="#8B4513" />
+            <stop offset="60%"  stopColor="#6B3010" />
+            <stop offset="100%" stopColor="#4A1E08" />
           </linearGradient>
+
+          {/* Crema highlight — same y range but fades to transparent */}
+          <linearGradient id="cremaHL" x1="0" y1="90" x2="0" y2="380"
+                          gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#FFE080" stopOpacity="0.90" />
+            <stop offset="15%"  stopColor="#EAA828" stopOpacity="0.70" />
+            <stop offset="40%"  stopColor="#C87818" stopOpacity="0.40" />
+            <stop offset="80%"  stopColor="#A05818" stopOpacity="0.10" />
+            <stop offset="100%" stopColor="#8B4513" stopOpacity="0"    />
+          </linearGradient>
+
+          {/* Organic texture filter — subtle turbulence gives the rope/twist look */}
+          <filter id="streamFx" x="-15%" y="0%" width="130%" height="100%"
+                  colorInterpolationFilters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.08 0.6"
+                          numOctaves="3" seed="7" result="noise" />
+            <feColorMatrix type="saturate" values="0" in="noise" result="gray" />
+            <feBlend in="SourceGraphic" in2="gray" mode="overlay" result="blended" />
+            <feComposite in="blended" in2="SourceGraphic" operator="in" />
+            <feGaussianBlur stdDeviation="0.4" />
+          </filter>
+
+          {/* Soft glow around stream tip */}
           <filter id="glow">
-            <feGaussianBlur stdDeviation="1.5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            <feGaussianBlur stdDeviation="1.8" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
         </defs>
 
-        {/* ── STEAM WANDS (always animating) ── */}
-        <g opacity="0.7">
-          <path d="M148 60 Q152 50 150 35 Q148 20 152 8" stroke="#ccc" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0">
-            <animate attributeName="opacity" values="0;0.6;0" dur="2.4s" repeatCount="indefinite" begin="0s" />
-            <animate attributeName="d" values="M148 60 Q152 50 150 35 Q148 20 152 8;M148 60 Q154 48 151 33 Q149 18 153 5;M148 60 Q152 50 150 35 Q148 20 152 8" dur="2.4s" repeatCount="indefinite" />
-          </path>
-          <path d="M152 60 Q157 48 155 32 Q153 17 157 4" stroke="#bbb" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0">
-            <animate attributeName="opacity" values="0;0.5;0" dur="3.1s" repeatCount="indefinite" begin="0.7s" />
-            <animate attributeName="d" values="M152 60 Q157 48 155 32 Q153 17 157 4;M152 60 Q159 46 156 30 Q154 15 158 2;M152 60 Q157 48 155 32 Q153 17 157 4" dur="3.1s" repeatCount="indefinite" />
-          </path>
-          <path d="M156 62 Q162 49 159 33 Q157 18 161 5" stroke="#aaa" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0">
-            <animate attributeName="opacity" values="0;0.4;0" dur="2.8s" repeatCount="indefinite" begin="1.4s" />
-          </path>
-        </g>
+        {/*
+         * ── MACHINE (group head + portafilter, close-crop / cut view) ──
+         *
+         * The group head rectangle extends above y=0 so the top is clipped
+         * by the viewport — giving the "cut view, only seeing the spout" look.
+         *)
+         */}
 
-        {/* ── MACHINE BODY ── */}
-        {/* Main body */}
-        <rect x="18" y="68" width="148" height="190" rx="14" fill="url(#machineBody)" />
-        {/* Top panel highlight */}
-        <rect x="24" y="68" width="136" height="8" rx="4" fill="#3a3a3a" />
-        {/* Front face inset */}
-        <rect x="28" y="88" width="128" height="148" rx="8" fill="#252525" />
-        {/* Brand strip */}
-        <rect x="36" y="94" width="112" height="14" rx="4" fill="#1a1a1a" />
-        <text x="92" y="104.5" textAnchor="middle" fontSize="6" fill="#888" fontFamily="Inter, sans-serif" letterSpacing="2">ESPRESSO</text>
+        {/* Group head main block — extends above y=0 */}
+        <rect x="2" y="-28" width="96" height="72" rx="6"
+              fill="url(#chrome1)" />
+        {/* Top surface highlight */}
+        <rect x="8" y="-28" width="84" height="5" rx="2"
+              fill="white" opacity="0.18" />
+        {/* Screw detail top-left */}
+        <circle cx="12" cy="-10" r="3.5" fill="url(#chromeDark)" />
+        <circle cx="12" cy="-10" r="1.5" fill="#444" />
+        {/* Screw detail top-right */}
+        <circle cx="88" cy="-10" r="3.5" fill="url(#chromeDark)" />
+        <circle cx="88" cy="-10" r="1.5" fill="#444" />
 
-        {/* ── PRESSURE GAUGE ── */}
-        <circle cx="70" cy="140" r="22" fill="url(#gaugeGrad)" />
-        <circle cx="70" cy="140" r="19" fill="none" stroke="#444" strokeWidth="1.5" />
-        <circle cx="70" cy="140" r="16" fill="#1c1c1c" />
-        {/* Gauge ticks */}
-        {[...Array(9)].map((_, i) => {
-          const angle = -140 + i * 35;
-          const rad = (angle * Math.PI) / 180;
-          const r1 = 13, r2 = 15;
-          return (
-            <line
-              key={i}
-              x1={70 + r1 * Math.cos(rad)} y1={140 + r1 * Math.sin(rad)}
-              x2={70 + r2 * Math.cos(rad)} y2={140 + r2 * Math.sin(rad)}
-              stroke="#555" strokeWidth="0.8"
-            />
-          );
-        })}
-        {/* Needle pointing to ~9 bar / perfect zone */}
-        <line x1="70" y1="140" x2="70" y2="128" stroke="#e8543a" strokeWidth="1.5" strokeLinecap="round"
-          transform="rotate(20 70 140)" />
-        <circle cx="70" cy="140" r="2" fill="#888" />
-        <text x="70" y="159" textAnchor="middle" fontSize="4.5" fill="#666" fontFamily="Inter, sans-serif">BAR</text>
+        {/* Group head bottom face / gasket ring */}
+        <ellipse cx="50" cy="44" rx="46" ry="9" fill="#4a4a4a" />
+        <ellipse cx="50" cy="44" rx="40" ry="7" fill="#383838" />
 
-        {/* ── BUTTONS ── */}
-        <circle cx="118" cy="126" r="7" fill="#333" stroke="#444" strokeWidth="1" />
-        <circle cx="118" cy="126" r="4" fill="#1a1a1a" />
-        <circle cx="136" cy="126" r="5" fill="#2a6e3a" stroke="#3a8a4a" strokeWidth="0.8" />
-        <circle cx="118" cy="144" r="5" fill="#222" stroke="#3a3a3a" strokeWidth="0.8" />
-        <circle cx="136" cy="144" r="5" fill="#222" stroke="#3a3a3a" strokeWidth="0.8" />
+        {/* Shower screen disc */}
+        <ellipse cx="50" cy="44" rx="34" ry="5.5" fill="url(#showerScreen)" />
+        {/* Shower screen holes (4×4 grid impression) */}
+        {[38,44,50,56,62].map(cx =>
+          [42,46].map(cy => (
+            <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="0.9"
+                    fill="#1a1a1a" opacity="0.8" />
+          ))
+        )}
 
-        {/* ── STEAM WAND ARM ── */}
-        <path d="M152 178 L166 178 Q174 178 174 186 L174 230" stroke="#444" strokeWidth="5" fill="none" strokeLinecap="round" />
-        <path d="M174 230 L174 238" stroke="#666" strokeWidth="4" fill="none" strokeLinecap="round" />
-        <circle cx="174" cy="240" r="3" fill="#555" />
+        {/* ── Portafilter collar (locks into group head) ── */}
+        <path d="M 10 46 Q 8 58 12 62 L 88 62 Q 92 58 90 46 Z"
+              fill="url(#chrome2)" />
+        {/* Collar seam */}
+        <line x1="10" y1="54" x2="90" y2="54"
+              stroke="white" strokeWidth="0.5" opacity="0.25" />
 
-        {/* ── WATER TANK (right side detail) ── */}
-        <rect x="152" y="90" width="14" height="60" rx="4" fill="#2a2a2a" stroke="#3a3a3a" strokeWidth="1" />
-        <rect x="154" y="108" width="10" height="22" rx="2" fill="#0e2235" opacity="0.6" />
-        <rect x="154" y="108" width="10" height="8" rx="2" fill="#1a4a6e" opacity="0.8" />
+        {/* ── Portafilter basket body ── */}
+        <path d="M 14 62 Q 12 80 18 84 L 82 84 Q 88 80 86 62 Z"
+              fill="url(#chrome3)" />
+        {/* Basket base ellipse */}
+        <ellipse cx="50" cy="84" rx="32" ry="5.5" fill="#9a9a9a" />
+        <ellipse cx="50" cy="84" rx="26" ry="4" fill="#888" />
 
-        {/* ── GROUP HEAD & PORTAFILTER ── */}
-        <rect x="62" y="248" width="60" height="18" rx="6" fill="#333" />
-        {/* portafilter handle */}
-        <path d="M62 255 Q40 255 36 265 Q34 272 38 276" stroke="#3a2a1a" strokeWidth="7" fill="none" strokeLinecap="round" />
-        {/* portafilter collar */}
-        <rect x="68" y="264" width="48" height="14" rx="5" fill="#2a2a2a" />
-        {/* spout */}
-        <path d="M84 278 L84 294 M100 278 L100 294" stroke="#222" strokeWidth="4" fill="none" strokeLinecap="round" />
-        {/* spout tips */}
-        <circle cx="84" cy="296" r="2.5" fill="#1a1a1a" />
-        <circle cx="100" cy="296" r="2.5" fill="#1a1a1a" />
+        {/* Spout outlet holes */}
+        <ellipse cx="38" cy="88" rx="4.5" ry="3" fill="#282828" />
+        <ellipse cx="62" cy="88" rx="4.5" ry="3" fill="#282828" />
+        {/* Spout openings (dark interior) */}
+        <ellipse cx="38" cy="88" rx="2.5" ry="1.8" fill="#111" />
+        <ellipse cx="62" cy="88" rx="2.5" ry="1.8" fill="#111" />
 
-        {/* ── DRIP TRAY ── */}
-        <rect x="28" y="258" width="128" height="8" rx="2" fill="#2a2a2a" />
-        {/* Tray grid pattern */}
-        {[0,1,2,3,4].map(i => (
-          <rect key={i} x={32 + i * 24} y="258" width="1" height="8" fill="#333" />
-        ))}
-        <rect x="24" y="265" width="136" height="10" rx="3" fill="#222" />
+        {/* ── Portafilter handle (extends off-right edge) ── */}
+        {/* Handle collar */}
+        <ellipse cx="86" cy="72" rx="6" ry="8" fill="#707070" />
+        {/* Handle rod */}
+        <path d="M 86 65 Q 92 64 102 66 Q 116 68 128 74"
+              stroke="#1c1c1c" strokeWidth="9" fill="none" strokeLinecap="round" />
+        {/* Handle rubber texture */}
+        <path d="M 89 64.5 Q 96 63 106 65 Q 118 67 126 72"
+              stroke="#2e2e2e" strokeWidth="6" fill="none" strokeLinecap="round" />
+        {/* Handle highlight */}
+        <path d="M 90 63 Q 98 62 108 64 Q 118 66 124 70"
+              stroke="#666" strokeWidth="1.2" fill="none" strokeLinecap="round"
+              opacity="0.6" />
 
-        {/* ── COFFEE STREAM (scroll-driven) ── */}
-        {/* Main stream — wavy bezier */}
-        <path
-          ref={streamRef}
-          d={`M92 298
-             C92 330 96 350 90 390
-             C84 430 96 460 92 510
-             C88 560 95 590 91 640
-             C87 690 96 720 92 770
-             C88 820 95 850 91 900
-             C87 950 96 980 92 1030
-             C88 1080 95 1110 91 1160
-             C87 1210 96 1240 92 1290
-             C88 1340 95 1370 91 1420
-             C87 1470 96 1500 92 1550
-             C88 1600 95 1630 91 1680
-             C87 1730 96 1760 92 1810
-             C88 1860 95 1890 91 1940
-             C87 1990 96 2020 92 2070
-             C88 2120 95 2150 91 2200
-             C87 2250 96 2280 92 2300`}
-          fill="none"
-          stroke="url(#streamGrad)"
-          strokeWidth="5.5"
-          strokeLinecap="round"
-          filter="url(#glow)"
-        />
-        {/* Highlight shimmer on stream */}
-        <path
-          ref={highlightRef}
-          d={`M92 298
-             C92 330 96 350 90 390
-             C84 430 96 460 92 510
-             C88 560 95 590 91 640
-             C87 690 96 720 92 770
-             C88 820 95 850 91 900
-             C87 950 96 980 92 1030
-             C88 1080 95 1110 91 1160
-             C87 1210 96 1240 92 1290
-             C88 1340 95 1370 91 1420
-             C87 1470 96 1500 92 1550
-             C88 1600 95 1630 91 1680
-             C87 1730 96 1760 92 1810
-             C88 1860 95 1890 91 1940
-             C87 1990 96 2020 92 2070
-             C88 2120 95 2150 91 2200
-             C87 2250 96 2280 92 2300`}
-          fill="none"
-          stroke="url(#highlightGrad)"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
+        {/* ── COFFEE STREAMS (scroll-driven via strokeDashoffset) ── */}
 
-        {/* ── DRIP DROP at tip ── */}
-        <circle
-          ref={dripRef}
-          cx="92"
-          cy="310"
-          r="3.5"
-          fill="#7a4520"
-          opacity="0"
-          style={{ transition: "opacity 0.2s" }}
-        >
-          <animate attributeName="r" values="3.5;4.5;3.5" dur="0.6s" repeatCount="indefinite" />
-        </circle>
+        {/*
+         * Right-spout short stream — converges from (62,90) to (47,140)
+         * Reveals at the same pixel-growth rate as the main stream.
+         */}
+        <path ref={rightRef}
+              d={RIGHT_D}
+              fill="none" stroke="url(#espresso)"
+              strokeWidth="3.5" strokeLinecap="round"
+              filter="url(#streamFx)" />
+        <path ref={rightCrRef}
+              d={RIGHT_D}
+              fill="none" stroke="url(#cremaHL)"
+              strokeWidth="1.8" strokeLinecap="round"
+              filter="url(#glow)" />
 
-        {/* ── ESPRESSO CUP (bottom area, fills with scroll progress) ── */}
-        <g transform="translate(60, 2560)">
-          {/* saucer */}
-          <ellipse cx="40" cy="32" rx="38" ry="5" fill="#2a2a2a" />
-          {/* cup body */}
-          <path d="M14 8 Q12 28 16 30 L64 30 Q68 28 66 8 Z" fill="#2e2e2e" stroke="#444" strokeWidth="1" />
-          {/* cup fill (grows with scroll, clipped to cup interior) */}
-          <clipPath id="cupClip">
-            <path d="M14 8 Q12 28 16 30 L64 30 Q68 28 66 8 Z" />
-          </clipPath>
-          <rect
-            ref={cupFillRef}
-            x="14"
-            y="30"
-            width="52"
-            height="0"
-            fill="#6f3e1e"
-            opacity="0.9"
-            clipPath="url(#cupClip)"
-          />
-          {/* cup rim */}
-          <ellipse cx="40" cy="8" rx="26" ry="4" fill="#3a3a3a" />
-          {/* handle */}
-          <path d="M64 14 Q78 14 78 22 Q78 30 64 30" stroke="#3a3a3a" strokeWidth="3" fill="none" strokeLinecap="round" />
-          {/* foam highlight */}
-          <ellipse cx="40" cy="8" rx="18" ry="2" fill="#c8a882" opacity="0.15" />
-        </g>
+        {/*
+         * Main stream — from left spout (38,90) down through ~2600 SVG units.
+         * Layer order: dark body first, golden crema shimmer on top.
+         *)
+         */}
+        <path ref={mainRef} d={MAIN_D}
+              fill="none" stroke="url(#espresso)"
+              strokeWidth="4" strokeLinecap="round"
+              filter="url(#streamFx)" />
+        <path ref={cremaRef} d={MAIN_D}
+              fill="none" stroke="url(#cremaHL)"
+              strokeWidth="2" strokeLinecap="round"
+              filter="url(#glow)" />
       </svg>
     </div>
   );
