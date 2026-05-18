@@ -113,6 +113,35 @@ All colors MUST be HSL.
   }
 }
 
+/* ── Espresso machine panel layout ── */
+.espresso-panel {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 40;
+  overflow: visible;
+  padding-top: calc(50vh - 160px);
+}
+
+.espresso-content {
+  margin-left: 220px;
+}
+
+@media (max-width: 900px) {
+  .espresso-panel {
+    display: none;
+  }
+  .espresso-content {
+    margin-left: 0;
+  }
+}
+
 @layer utilities {
   .story-link {
     position: relative;

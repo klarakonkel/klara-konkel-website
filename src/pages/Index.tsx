@@ -5,6 +5,7 @@ import Projects from "@/components/sections/Projects";
 import Experience from "@/components/sections/Experience";
 import Contact from "@/components/sections/Contact";
 import Footer from "@/components/sections/Footer";
+import EspressoMachine from "@/components/sections/EspressoMachine";
 
 const Index = () => {
   const jsonLd = {
@@ -21,7 +22,9 @@ const Index = () => {
   };
 
   return (
-    <main>
+    <>
+      <EspressoMachine />
+      <main className="espresso-content">
       <Navbar />
       <Hero />
       <Projects />
@@ -33,7 +36,8 @@ const Index = () => {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-    </main>
+      </main>
+    </>
   );
 };
 
