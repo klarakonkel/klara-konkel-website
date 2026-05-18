@@ -1,142 +1,124 @@
 import { useEffect, useRef } from "react";
 
 /*
- * Physics-based espresso stream renderer on Canvas.
+ * Two-mode coffee physics
+ * ─────────────────────────────────────────────────────────────────
+ * DROP mode  (reading pace, smoothVel < 2)
+ *   Spawn every 11-15 frames → initial gap ~15-20 px → each drop falls
+ *   independently, never crosses DROP_GAP=14 threshold → renders as
+ *   individual teardrop shapes.
  *
- * While scrolling  → drops spawn at the portafilter spout.
- * Slow scroll      → sparse drips (individual teardrop shapes).
- * Fast scroll      → dense drops that touch → rendered as a continuous stream.
- * Scroll stops     → source closes instantly; existing liquid keeps falling under gravity.
+ * STREAM mode  (browsing pace, smoothVel > 4.5)
+ *   Spawn every 2-3 frames → initial gap ~2-3 px.
+ *   As drops accelerate, the gap between consecutive stream drops grows
+ *   at 0.39 px/frame until both reach MAX_VY, giving a maximum stable
+ *   gap of ~27.5 px — well below STREAM_GAP=32, so they ALWAYS stay
+ *   in the same segment and render as one continuous bezier stroke.
  *
- * Rendering layers (bottom → top inside the fixed panel):
- *   1. <canvas>  — physics particles / stream
- *   2. <svg>     — chrome machine head (covers the spout origin)
+ * Scroll stops → isScrolling=false → no new spawns → existing liquid
+ *   falls under gravity until it exits the viewport (gravity continues).
+ *
+ * Mixed stream/drop pairs never connect (thresh=Infinity) so a slowing-
+ * down transition never causes a stray drop to join a moving stream.
  */
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const PANEL_W    = 110;   // CSS px
-const GRAVITY    = 0.13;
-const MAX_VY     = 9;
-const SPOUT_X    = 52;    // horizontal centre between the two spout holes
-const SPOUT_Y    = 91;    // vertical position of spout exit in CSS px
-const DROP_R     = 3.5;   // half-width of the stream / drop radius
-const GAP_THRESH = 14;    // max y-gap (px) for two drops to be "connected"
-
-// Espresso colour stops (y relative to SPOUT_Y)
-const CREMA_Y  = 0;    // golden crema at very top
-const AMBER_Y  = 50;   // amber transition
-const MID_Y    = 160;  // warm medium
-const DARK_Y   = 400;  // full dark espresso
-
-function espressoColor(y: number, alpha: number): string {
-  const dy = y - SPOUT_Y;
-  if (dy < AMBER_Y)  return `rgba(214,140,28,${alpha})`;
-  if (dy < MID_Y)    return `rgba(168,82,20,${alpha})`;
-  if (dy < DARK_Y)   return `rgba(120,52,14,${alpha})`;
-  return                     `rgba(84,34,10,${alpha})`;
-}
+const PANEL_W      = 110;
+const GRAVITY      = 0.13;
+const MAX_VY       = 9.0;
+const SPOUT_X      = 52;
+const SPOUT_Y      = 92;
+const DROP_R       = 3.5;          // half-width of stream / drop radius
+const STREAM_GAP   = 32;           // px — max stable stream-drop gap is ~27.5
+const DROP_GAP     = 14;           // px — drops with initial gap ~15-20 stay sep.
+const ENTER_STREAM = 4.5;          // smoothVel threshold to enter stream mode
+const EXIT_STREAM  = 2.0;          // smoothVel threshold to exit stream mode
 
 interface Drop {
-  x: number;
-  y: number;
-  vy: number;
-  vx: number;
+  x: number; y: number;
+  vy: number; vx: number;
   r: number;
+  stream: boolean;
 }
 
-// ─── Drawing helpers ──────────────────────────────────────────────────────────
+// ─── Canvas helpers ───────────────────────────────────────────────
+
+function pathThrough(
+  ctx: CanvasRenderingContext2D,
+  pts: { x: number; y: number }[],
+  offsetX = 0,
+) {
+  ctx.moveTo(pts[0].x + offsetX, pts[0].y);
+  if (pts.length === 2) {
+    ctx.lineTo(pts[1].x + offsetX, pts[1].y);
+    return;
+  }
+  let mx = (pts[0].x + pts[1].x) / 2 + offsetX;
+  let my = (pts[0].y + pts[1].y) / 2;
+  ctx.lineTo(mx, my);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const nx = (pts[i].x + pts[i + 1].x) / 2 + offsetX;
+    const ny = (pts[i].y + pts[i + 1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x + offsetX, pts[i].y, nx, ny);
+  }
+  ctx.lineTo(pts[pts.length - 1].x + offsetX, pts[pts.length - 1].y);
+}
 
 function drawDrop(ctx: CanvasRenderingContext2D, p: Drop) {
   const rx = p.r;
-  // elongate vertically based on falling speed so fast drops look like teardrops
-  const ry = Math.min(p.r * (1 + Math.abs(p.vy) * 0.22), p.r * 2.4);
-
+  const ry = Math.min(p.r * (1 + Math.abs(p.vy) * 0.2), p.r * 2.2);
   ctx.save();
   ctx.translate(p.x, p.y);
-
-  const grad = ctx.createRadialGradient(-rx * 0.35, -ry * 0.35, 0, 0, 0, Math.max(rx, ry));
-  grad.addColorStop(0,   espressoColor(p.y - 20, 0.95));
-  grad.addColorStop(0.5, espressoColor(p.y,       0.90));
-  grad.addColorStop(1,   espressoColor(p.y + 30,  0.80));
-
+  const g = ctx.createRadialGradient(-rx * 0.4, -ry * 0.4, 0, 0, 0, Math.max(rx, ry));
+  g.addColorStop(0,   'rgba(220,148,30,0.95)');
+  g.addColorStop(0.4, 'rgba(158,74,18,0.92)');
+  g.addColorStop(1,   'rgba(80,32,10,0.82)');
   ctx.beginPath();
   ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
+  ctx.fillStyle = g;
   ctx.fill();
   ctx.restore();
 }
 
-function drawStreamSegment(ctx: CanvasRenderingContext2D, seg: Drop[]) {
+function drawSegment(ctx: CanvasRenderingContext2D, seg: Drop[]) {
   if (seg.length === 0) return;
   if (seg.length === 1) { drawDrop(ctx, seg[0]); return; }
 
-  const pts = seg;
-  const y0  = pts[0].y;
-  const yN  = pts[pts.length - 1].y;
+  const y0 = seg[0].y;
+  const yN = seg[seg.length - 1].y;
 
-  // ── main stream body (thick smooth stroke) ──
+  // ── Main stream body ──
   ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  if (pts.length === 2) {
-    ctx.lineTo(pts[1].x, pts[1].y);
-  } else {
-    // midpoint-smooth quadratic bezier through all nodes
-    let mx = (pts[0].x + pts[1].x) / 2;
-    let my = (pts[0].y + pts[1].y) / 2;
-    ctx.lineTo(mx, my);
-    for (let i = 1; i < pts.length - 1; i++) {
-      const nx = (pts[i].x + pts[i + 1].x) / 2;
-      const ny = (pts[i].y + pts[i + 1].y) / 2;
-      ctx.quadraticCurveTo(pts[i].x, pts[i].y, nx, ny);
-    }
-    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  }
-
-  const mainGrad = ctx.createLinearGradient(0, y0, 0, yN + 40);
-  mainGrad.addColorStop(0,    'rgba(214,140,28,0.93)');  // crema
-  mainGrad.addColorStop(0.06, 'rgba(185,100,24,0.92)');  // amber
-  mainGrad.addColorStop(0.20, 'rgba(148,68,18,0.91)');   // warm brown
-  mainGrad.addColorStop(0.50, 'rgba(110,46,14,0.90)');   // medium espresso
-  mainGrad.addColorStop(1,    'rgba(76,30,10,0.88)');    // dark
-
-  ctx.strokeStyle = mainGrad;
-  ctx.lineWidth   = DROP_R * 2;         // ~7 px — realistic stream width
+  pathThrough(ctx, seg);
+  const gMain = ctx.createLinearGradient(0, y0, 0, yN + 50);
+  gMain.addColorStop(0,    'rgba(218,144,30,0.94)');   // golden crema
+  gMain.addColorStop(0.05, 'rgba(188,102,24,0.93)');   // amber
+  gMain.addColorStop(0.18, 'rgba(152,70,18,0.92)');    // warm
+  gMain.addColorStop(0.45, 'rgba(112,48,14,0.91)');    // medium espresso
+  gMain.addColorStop(1,    'rgba(72,28,9,0.89)');      // dark roast
+  ctx.strokeStyle = gMain;
+  ctx.lineWidth   = DROP_R * 2;
   ctx.lineCap     = 'round';
   ctx.lineJoin    = 'round';
   ctx.stroke();
 
-  // ── highlight shimmer (thin, lighter, right edge, fades with depth) ──
-  ctx.beginPath();
-  const shiftX = DROP_R * 0.55;
-  ctx.moveTo(pts[0].x + shiftX, pts[0].y);
-  if (pts.length === 2) {
-    ctx.lineTo(pts[1].x + shiftX, pts[1].y);
-  } else {
-    let mx = (pts[0].x + pts[1].x) / 2 + shiftX;
-    let my = (pts[0].y + pts[1].y) / 2;
-    ctx.lineTo(mx, my);
-    for (let i = 1; i < pts.length - 1; i++) {
-      const nx = (pts[i].x + pts[i + 1].x) / 2 + shiftX;
-      const ny = (pts[i].y + pts[i + 1].y) / 2;
-      ctx.quadraticCurveTo(pts[i].x + shiftX, pts[i].y, nx, ny);
-    }
-    ctx.lineTo(pts[pts.length - 1].x + shiftX, pts[pts.length - 1].y);
+  // ── Crema highlight shimmer: right edge, fades below first ~250 px ──
+  const hlFadeY = Math.min(y0 + 250, yN);
+  if (y0 < hlFadeY) {
+    ctx.beginPath();
+    pathThrough(ctx, seg, DROP_R * 0.5);
+    const gHL = ctx.createLinearGradient(0, y0, 0, hlFadeY);
+    gHL.addColorStop(0,    'rgba(252,200,82,0.70)');
+    gHL.addColorStop(0.18, 'rgba(228,160,56,0.50)');
+    gHL.addColorStop(0.45, 'rgba(198,112,38,0.22)');
+    gHL.addColorStop(0.75, 'rgba(168,82,26,0.06)');
+    gHL.addColorStop(1,    'rgba(140,60,18,0)');
+    ctx.strokeStyle = gHL;
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
   }
-
-  const fadeEnd = Math.min(y0 + 280, yN);
-  const hlGrad  = ctx.createLinearGradient(0, y0, 0, fadeEnd);
-  hlGrad.addColorStop(0,    'rgba(248,195,80,0.75)');
-  hlGrad.addColorStop(0.15, 'rgba(225,155,55,0.55)');
-  hlGrad.addColorStop(0.40, 'rgba(195,110,38,0.28)');
-  hlGrad.addColorStop(0.70, 'rgba(165,80,25,0.08)');
-  hlGrad.addColorStop(1,    'rgba(140,60,18,0)');
-
-  ctx.strokeStyle = hlGrad;
-  ctx.lineWidth   = 1.4;
-  ctx.stroke();
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────
 
 export default function EspressoMachine() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -151,48 +133,66 @@ export default function EspressoMachine() {
     canvas.height       = h * dpr;
     canvas.style.width  = `${PANEL_W}px`;
     canvas.style.height = `${h}px`;
-
     const ctx = canvas.getContext('2d')!;
     ctx.scale(dpr, dpr);
 
-    const drops: Drop[]  = [];
-    let scrollVel        = 0;
+    const drops: Drop[] = [];
+    let smoothVel        = 0;
+    let inStreamMode     = false;
     let isScrolling      = false;
     let lastScrollY      = window.scrollY;
-    let framesSinceSpawn = 0;
+    let lastSpawnFrame   = 0;
+    let frame_n          = 0;
     let stopTimer: ReturnType<typeof setTimeout>;
     let rafId: number;
 
-    function spawn() {
-      const wobble = (Math.random() - 0.5) * 2;
+    function spawn(stream: boolean) {
+      const w = (Math.random() - 0.5) * 2.2;
       drops.push({
-        x:  SPOUT_X + wobble,
-        y:  SPOUT_Y,
-        vy: 0.55 + Math.random() * 0.45,
-        vx: wobble * 0.06,
-        r:  DROP_R + (Math.random() - 0.5) * 0.6,
+        x: SPOUT_X + w,
+        y: SPOUT_Y,
+        vy: 0.5 + Math.random() * 0.45,
+        vx: w * 0.05,
+        r:  DROP_R + (Math.random() - 0.5) * 0.5,
+        stream,
       });
     }
 
     function onScroll() {
-      const y   = window.scrollY;
-      scrollVel = Math.abs(y - lastScrollY);
+      const y  = window.scrollY;
+      const dv = Math.abs(y - lastScrollY);
       lastScrollY = y;
+      // EMA smoothing so a single fast frame doesn't immediately lock stream mode
+      smoothVel = smoothVel * 0.62 + dv * 0.38;
       isScrolling = true;
+      if (smoothVel > ENTER_STREAM) inStreamMode = true;
       clearTimeout(stopTimer);
-      stopTimer = setTimeout(() => { isScrolling = false; scrollVel = 0; }, 120);
+      stopTimer = setTimeout(() => { isScrolling = false; }, 120);
     }
 
     function frame() {
+      frame_n++;
+
+      // Decay velocity when not scrolling; exit stream mode when slow
+      if (!isScrolling) {
+        smoothVel *= 0.86;
+        if (smoothVel < EXIT_STREAM) inStreamMode = false;
+        if (smoothVel < 0.3)        smoothVel = 0;
+      }
+
       // ── Spawn ──
       if (isScrolling) {
-        // interval: 13 frames at vel≈1 (drips) → 2 frames at vel≥11 (stream)
-        const interval = Math.max(2, Math.round(14 - scrollVel));
-        framesSinceSpawn++;
-        if (framesSinceSpawn >= interval) {
-          framesSinceSpawn = 0;
-          spawn();
-          if (scrollVel > 9) spawn(); // extra drop at very fast scroll
+        let interval: number;
+        if (inStreamMode) {
+          // Dense: every 2–3 frames → initial gap 2–3 px → always connected
+          interval = smoothVel > 8 ? 2 : 3;
+        } else {
+          // Sparse: every 11–15 frames → initial gap 15–20 px → individual drops
+          interval = Math.max(11, Math.round(18 - smoothVel * 2));
+        }
+        if (frame_n - lastSpawnFrame >= interval) {
+          lastSpawnFrame = frame_n;
+          spawn(inStreamMode);
         }
       }
 
@@ -203,45 +203,45 @@ export default function EspressoMachine() {
         d.x  += d.vx;
         d.vx *= 0.95;
       }
-
-      // prune off-screen
       for (let i = drops.length - 1; i >= 0; i--) {
         if (drops[i].y > h + 12) drops.splice(i, 1);
       }
 
       // ── Render ──
       ctx.clearRect(0, 0, PANEL_W, h);
-
-      // sort top→bottom so segment detection is correct
       drops.sort((a, b) => a.y - b.y);
 
-      // group consecutive drops that are within GAP_THRESH of each other
+      // Segment detection with per-pair gap threshold:
+      //   stream + stream → STREAM_GAP (32 px, always connected)
+      //   drop  + drop   → DROP_GAP   (14 px, always separate)
+      //   mixed          → Infinity   (never connect)
       const segs: Drop[][] = [];
       let cur: Drop[] = [];
-
       for (let i = 0; i < drops.length; i++) {
         if (i === 0) {
           cur.push(drops[i]);
-        } else if (drops[i].y - drops[i - 1].y <= GAP_THRESH) {
-          cur.push(drops[i]);
         } else {
-          segs.push(cur);
-          cur = [drops[i]];
+          const gap = drops[i].y - drops[i - 1].y;
+          const ss  = drops[i].stream;
+          const ps  = drops[i - 1].stream;
+          const thr = (ss && ps) ? STREAM_GAP : (!ss && !ps) ? DROP_GAP : Infinity;
+          if (gap <= thr) {
+            cur.push(drops[i]);
+          } else {
+            segs.push(cur);
+            cur = [drops[i]];
+          }
         }
       }
       if (cur.length > 0) segs.push(cur);
 
-      for (const seg of segs) {
-        if (seg.length === 1) drawDrop(ctx, seg[0]);
-        else drawStreamSegment(ctx, seg);
-      }
+      for (const seg of segs) drawSegment(ctx, seg);
 
       rafId = requestAnimationFrame(frame);
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
     rafId = requestAnimationFrame(frame);
-
     return () => {
       window.removeEventListener('scroll', onScroll);
       cancelAnimationFrame(rafId);
@@ -249,119 +249,170 @@ export default function EspressoMachine() {
     };
   }, []);
 
+  // ─── JSX ──────────────────────────────────────────────────────────
   return (
     <div className="espresso-panel" aria-hidden="true">
 
-      {/* Physics stream — behind machine SVG */}
-      <canvas
-        ref={canvasRef}
-        style={{ position: 'absolute', top: 0, left: 0 }}
-      />
+      {/* Physics stream canvas — behind the machine SVG */}
+      <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
 
-      {/* Chrome machine head — covers stream origin, always on top */}
+      {/*
+       * Chrome portafilter / group head — "cut view" fixed at top-left.
+       * Handle is on the LEFT: extends beyond x=0 so it's naturally
+       * clipped by the viewport edge, giving a close-crop feel.
+       * SVG overflow:visible so the group-head rect (y=-32) and handle
+       * paths (x<0) render correctly within the fixed viewport bounds.
+       */}
       <svg
         viewBox="0 0 110 108"
         width="110"
         height="108"
         xmlns="http://www.w3.org/2000/svg"
-        style={{ position: 'absolute', top: 0, left: 0 }}
+        style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible' }}
       >
         <defs>
-          {/* Horizontal chrome reflection */}
-          <linearGradient id="chrH" x1="0" y1="0" x2="1" y2="0">
+          {/* ── Chrome gradients ── */}
+          {/* Main horizontal chrome reflection (3 bright bands) */}
+          <linearGradient id="cH1" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#5e5e5e" />
+            <stop offset="12%"  stopColor="#d0d0d0" />
+            <stop offset="28%"  stopColor="#a8a8a8" />
+            <stop offset="48%"  stopColor="#eeeeee" />
+            <stop offset="66%"  stopColor="#c0c0c0" />
+            <stop offset="82%"  stopColor="#f4f4f4" />
+            <stop offset="100%" stopColor="#787878" />
+          </linearGradient>
+
+          {/* Slightly different bands for the portafilter collar */}
+          <linearGradient id="cH2" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#4e4e4e" />
+            <stop offset="22%"  stopColor="#bcbcbc" />
+            <stop offset="48%"  stopColor="#e8e8e8" />
+            <stop offset="72%"  stopColor="#b0b0b0" />
+            <stop offset="100%" stopColor="#666666" />
+          </linearGradient>
+
+          {/* Basket — slightly warmer to differentiate */}
+          <linearGradient id="cH3" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#6a6a6a" />
+            <stop offset="35%"  stopColor="#d8d8d8" />
+            <stop offset="62%"  stopColor="#c4c4c4" />
+            <stop offset="100%" stopColor="#828282" />
+          </linearGradient>
+
+          {/* Shower screen radial — dark centre for depth */}
+          <radialGradient id="shower" cx="48%" cy="44%" r="54%">
             <stop offset="0%"   stopColor="#686868" />
-            <stop offset="16%"  stopColor="#d4d4d4" />
-            <stop offset="34%"  stopColor="#acacac" />
-            <stop offset="54%"  stopColor="#f0f0f0" />
-            <stop offset="74%"  stopColor="#c0c0c0" />
-            <stop offset="100%" stopColor="#7a7a7a" />
-          </linearGradient>
-
-          <linearGradient id="chrH2" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%"   stopColor="#545454" />
-            <stop offset="28%"  stopColor="#c0c0c0" />
-            <stop offset="55%"  stopColor="#e8e8e8" />
-            <stop offset="80%"  stopColor="#a8a8a8" />
-            <stop offset="100%" stopColor="#6c6c6c" />
-          </linearGradient>
-
-          <linearGradient id="chrH3" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%"   stopColor="#888" />
-            <stop offset="45%"  stopColor="#dcdcdc" />
-            <stop offset="75%"  stopColor="#c4c4c4" />
-            <stop offset="100%" stopColor="#8a8a8a" />
-          </linearGradient>
-
-          <radialGradient id="shower" cx="50%" cy="45%" r="52%">
-            <stop offset="0%"   stopColor="#606060" />
-            <stop offset="55%"  stopColor="#404040" />
-            <stop offset="100%" stopColor="#242424" />
+            <stop offset="50%"  stopColor="#424242" />
+            <stop offset="100%" stopColor="#202020" />
           </radialGradient>
 
-          {/* Very soft drop shadow under machine */}
-          <filter id="machShadow" x="-5%" y="-5%" width="110%" height="140%">
-            <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#000" floodOpacity="0.25" />
-          </filter>
+          {/* Subtle inner-shadow gradient across bottom of group head */}
+          <linearGradient id="cShadow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#000" stopOpacity="0"    />
+            <stop offset="100%" stopColor="#000" stopOpacity="0.18" />
+          </linearGradient>
         </defs>
 
-        {/* ── Group head block (extends above viewport for cut-view feel) ── */}
+        {/* ── GROUP HEAD (extends above viewport — cut view) ── */}
         <rect x="0" y="-32" width="100" height="74" rx="5"
-              fill="url(#chrH)" filter="url(#machShadow)" />
-        {/* Surface highlight line */}
-        <rect x="6" y="-32" width="88" height="4" rx="2"
-              fill="white" opacity="0.20" />
-        {/* Bolt detail TL */}
-        <circle cx="10" cy="-12" r="3.8" fill="#4a4a4a" />
-        <circle cx="10" cy="-12" r="2.0" fill="#333"    />
-        <line x1="8.6" y1="-12" x2="11.4" y2="-12" stroke="#555" strokeWidth="0.7" />
-        <line x1="10" y1="-13.4" x2="10" y2="-10.6" stroke="#555" strokeWidth="0.7" />
-        {/* Bolt detail TR */}
-        <circle cx="90" cy="-12" r="3.8" fill="#4a4a4a" />
-        <circle cx="90" cy="-12" r="2.0" fill="#333"    />
-        <line x1="88.6" y1="-12" x2="91.4" y2="-12" stroke="#555" strokeWidth="0.7" />
-        <line x1="90" y1="-13.4" x2="90" y2="-10.6" stroke="#555" strokeWidth="0.7" />
+              fill="url(#cH1)" />
+        {/* Second highlight band (thin bright strip near top) */}
+        <rect x="5" y="-28" width="90" height="3.5" rx="1.5"
+              fill="white" opacity="0.22" />
+        {/* Inner shadow at bottom of group head block */}
+        <rect x="0" y="28" width="100" height="14" rx="0"
+              fill="url(#cShadow)" />
 
-        {/* ── Shower screen (bottom face of group head) ── */}
-        <ellipse cx="50" cy="42" rx="48" ry="9" fill="#484848" />
-        <ellipse cx="50" cy="42" rx="42" ry="7" fill="#363636" />
-        <ellipse cx="50" cy="42" rx="35" ry="5.5" fill="url(#shower)" />
+        {/* Bolt / fastener — top-left */}
+        <circle cx="10" cy="-10" r="4.2" fill="#404040" />
+        <circle cx="10" cy="-10" r="2.4" fill="#2e2e2e" />
+        <line x1="8.3" y1="-10" x2="11.7" y2="-10"
+              stroke="#585858" strokeWidth="0.8" />
+        <line x1="10" y1="-11.7" x2="10" y2="-8.3"
+              stroke="#585858" strokeWidth="0.8" />
+        {/* Bolt / fastener — top-right */}
+        <circle cx="90" cy="-10" r="4.2" fill="#404040" />
+        <circle cx="90" cy="-10" r="2.4" fill="#2e2e2e" />
+        <line x1="88.3" y1="-10" x2="91.7" y2="-10"
+              stroke="#585858" strokeWidth="0.8" />
+        <line x1="90" y1="-11.7" x2="90" y2="-8.3"
+              stroke="#585858" strokeWidth="0.8" />
 
-        {/* Shower screen perforations */}
-        {[36,42,48,54,60,66].map(cx =>
-          [39, 43].map(cy => (
-            <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.1"
-                    fill="#191919" opacity="0.85" />
+        {/* ── SHOWER SCREEN (bottom face of group head) ── */}
+        <ellipse cx="50" cy="42" rx="49" ry="9"   fill="#464646" />
+        <ellipse cx="50" cy="42" rx="44" ry="7.5" fill="#383838" />
+        <ellipse cx="50" cy="42" rx="37" ry="6"   fill="url(#shower)" />
+        {/* Shower perforations — 2 rows of 6 */}
+        {[35, 41, 47, 53, 59, 65].flatMap((cx, col) =>
+          [39, 43].map((cy, row) => (
+            <circle key={`${col}-${row}`} cx={cx} cy={cy} r="1.2"
+                    fill="#141414" opacity="0.9" />
           ))
         )}
 
-        {/* ── Portafilter collar ── */}
-        <path d="M 8 44 Q 6 57 10 61 L 90 61 Q 94 57 92 44 Z"
-              fill="url(#chrH2)" />
-        <line x1="8"  y1="52.5" x2="92" y2="52.5"
-              stroke="white" strokeWidth="0.5" opacity="0.22" />
+        {/* ── PORTAFILTER MOUNTING LUGS ──
+             The two ears that twist-lock into the group head. */}
+        {/* Left lug */}
+        <path d="M 4 43 L 18 43 L 18 52 Q 15 56 10 55 Q 5 54 4 50 Z"
+              fill="url(#cH2)" />
+        <line x1="4" y1="48" x2="18" y2="48"
+              stroke="white" strokeWidth="0.4" opacity="0.28" />
+        {/* Right lug */}
+        <path d="M 96 43 L 82 43 L 82 52 Q 85 56 90 55 Q 95 54 96 50 Z"
+              fill="url(#cH2)" />
+        <line x1="96" y1="48" x2="82" y2="48"
+              stroke="white" strokeWidth="0.4" opacity="0.28" />
 
-        {/* ── Portafilter basket ── */}
-        <path d="M 12 61 Q 10 80 16 84 L 84 84 Q 90 80 88 61 Z"
-              fill="url(#chrH3)" />
-        <ellipse cx="50" cy="84" rx="34" ry="5.5" fill="#9e9e9e" />
-        <ellipse cx="50" cy="84" rx="28" ry="4.0" fill="#8a8a8a" />
+        {/* ── PORTAFILTER COLLAR ── */}
+        <path d="M 8 46 Q 6 59 10 63 L 90 63 Q 94 59 92 46 Z"
+              fill="url(#cH2)" />
+        {/* Collar surface highlight */}
+        <line x1="8" y1="54" x2="92" y2="54"
+              stroke="white" strokeWidth="0.55" opacity="0.20" />
 
-        {/* ── Spout exit holes ── */}
-        <ellipse cx="38" cy="88.5" rx="4.8" ry="3.2" fill="#2c2c2c" />
-        <ellipse cx="62" cy="88.5" rx="4.8" ry="3.2" fill="#2c2c2c" />
-        <ellipse cx="38" cy="88.5" rx="2.8" ry="1.9" fill="#111" />
-        <ellipse cx="62" cy="88.5" rx="2.8" ry="1.9" fill="#111" />
+        {/* ── PORTAFILTER BASKET ──
+             Tapered — wider at top, slightly narrower at base. */}
+        <path d="M 12 63 Q 10 82 17 86 L 83 86 Q 90 82 88 63 Z"
+              fill="url(#cH3)" />
+        {/* Bottom rim ellipse */}
+        <ellipse cx="50" cy="86" rx="33" ry="5.5" fill="#9c9c9c" />
+        <ellipse cx="50" cy="86" rx="27" ry="4.0" fill="#888888" />
+        {/* Subtle vertical highlight line down basket centre */}
+        <line x1="50" y1="64" x2="50" y2="85"
+              stroke="white" strokeWidth="0.8" opacity="0.10" />
 
-        {/* ── Handle collar ── */}
-        <ellipse cx="88" cy="72" rx="5" ry="7.5" fill="#6c6c6c" />
-        {/* Handle rod */}
-        <path d="M 88 65.5 Q 96 64 106 67 Q 120 70 132 76"
-              stroke="#1e1e1e" strokeWidth="9"   fill="none" strokeLinecap="round" />
-        <path d="M 91 65   Q 98 63 108 66 Q 120 69 130 74"
-              stroke="#2e2e2e" strokeWidth="6.5" fill="none" strokeLinecap="round" />
-        <path d="M 92 64   Q 100 62 110 65 Q 120 68 128 72"
-              stroke="#666"   strokeWidth="1.3" fill="none" strokeLinecap="round"
-              opacity="0.55" />
+        {/* ── SPOUT EXIT HOLES ── */}
+        <ellipse cx="38" cy="90" rx="5.0" ry="3.2" fill="#2a2a2a" />
+        <ellipse cx="62" cy="90" rx="5.0" ry="3.2" fill="#2a2a2a" />
+        <ellipse cx="38" cy="90" rx="2.8" ry="1.8" fill="#0e0e0e" />
+        <ellipse cx="62" cy="90" rx="2.8" ry="1.8" fill="#0e0e0e" />
+
+        {/* ── HANDLE — LEFT SIDE ──
+             Extends leftward beyond x=0; the viewport naturally clips it,
+             giving the "handle disappears off-frame" cut-view effect. */}
+        {/* Chrome collar ring where handle meets basket */}
+        <ellipse cx="22" cy="74" rx="6.5" ry="8.5" fill="#707070" />
+        <ellipse cx="22" cy="74" rx="4.5" ry="6"   fill="#5a5a5a" />
+        {/* Handle main body — matte black rubber, curves left */}
+        <path d="M 22 66 Q 10 64 -2 68 Q -16 72 -30 78"
+              stroke="#161616" strokeWidth="11" fill="none" strokeLinecap="round" />
+        {/* Rubber grip surface */}
+        <path d="M 22 66 Q 10 64 -2 68 Q -16 72 -30 78"
+              stroke="#272727" strokeWidth="8"  fill="none" strokeLinecap="round" />
+        {/* Grip texture lines (subtle ridges on rubber) */}
+        {[-6, -2, 2, 6, 10].map(dx => (
+          <path key={dx}
+                d={`M ${22+dx} ${65+dx*0.08} Q ${10+dx} ${63+dx*0.08} ${-2+dx} ${67+dx*0.08}`}
+                stroke="#333" strokeWidth="0.6" fill="none" opacity="0.45" />
+        ))}
+        {/* Specular highlight on top edge of handle */}
+        <path d="M 21 64.5 Q 9 62.5 -3 66.5 Q -15 70 -28 75.5"
+              stroke="#5a5a5a" strokeWidth="1.4" fill="none" strokeLinecap="round"
+              opacity="0.60" />
+        {/* Chrome end-cap ring (partially off-screen, visible at x<0) */}
+        <ellipse cx="-30" cy="78" rx="4.5" ry="3" fill="#868686" />
+        <ellipse cx="-30" cy="78" rx="2.5" ry="1.6" fill="#6a6a6a" />
       </svg>
     </div>
   );
