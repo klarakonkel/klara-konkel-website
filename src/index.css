@@ -119,21 +119,14 @@ All colors MUST be HSL.
   left: 0;
   top: 0;
   width: 110px;
-  /* Tall enough for the SVG stream to paint well below viewport */
   height: 100vh;
   pointer-events: none;
-  /* Above page content, below sticky navbar (z-50) */
   z-index: 45;
-  overflow: visible;
-}
-
-/* Stream is subtle — slightly transparent so page content reads over it */
-.espresso-panel svg {
-  opacity: 0.88;
+  /* stacking context so canvas + svg children layer correctly */
+  isolation: isolate;
 }
 
 .espresso-content {
-  /* Slight nudge so the portafilter doesn't overlap the nav logo */
   padding-left: 90px;
 }
 
