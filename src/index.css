@@ -113,31 +113,6 @@ All colors MUST be HSL.
   }
 }
 
-/* ── Espresso machine panel — fixed top-left accent ── */
-.espresso-panel {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 110px;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 45;
-  /* stacking context so canvas + svg children layer correctly */
-  isolation: isolate;
-}
-
-.espresso-content {
-  padding-left: 90px;
-}
-
-@media (max-width: 900px) {
-  .espresso-panel {
-    display: none;
-  }
-  .espresso-content {
-    padding-left: 0;
-  }
-}
 
 @layer utilities {
   .story-link {
