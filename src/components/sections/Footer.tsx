@@ -1,11 +1,10 @@
-import React from "react";
-
-const Footer = () => {
-  return (
-    <footer className="container py-4 text-center text-sm text-muted-foreground">
-      © {new Date().getFullYear()} Klara Konkel — Coffee-fueled hybrid athlete.
-    </footer>
-  );
-};
+const Footer = () => (
+  <footer className="container border-t border-border py-6 mt-16">
+    <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <span>© {new Date().getFullYear()} Klara Konkel</span>
+      <span>Coffee-fueled hybrid athlete.</span>
+    </div>
+  </footer>
+);
 
 export default Footer;

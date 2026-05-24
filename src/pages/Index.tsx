@@ -1,19 +1,31 @@
-import Navbar from "@/components/sections/Navbar";
-import Hero from "@/components/sections/Hero";
-import Skills from "@/components/sections/Skills";
+import AnimatedGlobe from "@/components/sections/AnimatedGlobe";
 import Projects from "@/components/sections/Projects";
 import Experience from "@/components/sections/Experience";
+import Skills from "@/components/sections/Skills";
 import Contact from "@/components/sections/Contact";
 import Footer from "@/components/sections/Footer";
-import EspressoMachine from "@/components/sections/EspressoMachine";
+import { getPublicUrl } from "@/lib/utils";
+
+const coordinates = [
+  { dates: "2025 — Present", city: "Tokyo, JP" },
+  { dates: "2024 — 2025",   city: "Buenos Aires, AR" },
+  { dates: "2023 — 2024",   city: "Berlin, DE" },
+  { dates: "2022 — 2023",   city: "San Francisco, CA" },
+];
+
+const dispatch = [
+  { href: "#projects",   label: "Selected Projects" },
+  { href: "#experience", label: "Experience" },
+  { href: "#skills",     label: "Skills & Stack" },
+  { href: "#contact",    label: "Get in Touch" },
+];
 
 const Index = () => {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Person",
     name: "Klara Konkel",
-    description:
-      "Future founder. Software & AI Developer. Outcome-focused CS & Business student @ Minerva University.",
+    description: "Future founder. Software & AI Developer. CS & Business @ Minerva University.",
     email: "mailto:klaraa.konkel@gmail.com",
     sameAs: [
       "https://linkedin.com/in/klara-konkel",
@@ -22,22 +34,87 @@ const Index = () => {
   };
 
   return (
-    <>
-      <EspressoMachine />
-      <main className="espresso-content">
-      <Navbar />
-      <Hero />
-      <Projects />
-      <Experience />
-      <Skills />
-      <Contact />
+    <div className="min-h-screen bg-background text-foreground">
+
+      {/* ── Masthead ── */}
+      <header className="container border-b border-border py-8">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="font-serif text-6xl md:text-7xl font-bold tracking-tight leading-none">
+              Klara Konkel
+            </h1>
+            <p className="label-tag mt-2.5">Vol. 01 — Portfolio & Field Notes</p>
+          </div>
+          <p className="hidden md:block max-w-[210px] text-right text-sm leading-relaxed text-muted-foreground mt-1">
+            Software & AI Development.<br />
+            Building outcome-driven systems<br />
+            through an ownership lens.<br />
+            CS &amp; Business @ Minerva University.
+          </p>
+        </div>
+      </header>
+
+      {/* ── Two-column body ── */}
+      <div className="container flex gap-12 py-10 items-start">
+
+        {/* Sidebar */}
+        <aside className="hidden lg:flex flex-col w-[210px] shrink-0 sticky top-8 self-start gap-8">
+
+          <AnimatedGlobe />
+
+          {/* Current coordinates */}
+          <div>
+            <p className="label-tag">Current Coordinates</p>
+            <hr className="mt-2 mb-4 border-border" />
+            <div className="space-y-4">
+              {coordinates.map((c) => (
+                <div key={c.city}>
+                  <p className="text-[10px] text-muted-foreground">{c.dates}</p>
+                  <p className="text-sm font-medium mt-0.5">{c.city}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Dispatch index */}
+          <div>
+            <p className="label-tag">Dispatch Index</p>
+            <hr className="mt-2 mb-4 border-border" />
+            <nav className="space-y-2.5">
+              {dispatch.map((d) => (
+                <a
+                  key={d.href}
+                  href={d.href}
+                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {d.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+
+          {/* Resume */}
+          <a href={getPublicUrl("/resume.pdf")} download className="editorial-btn justify-center">
+            ↓ &nbsp;Resume
+          </a>
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 min-w-0 space-y-20">
+          <Projects />
+          <Experience />
+          <Skills />
+          <Contact />
+        </main>
+      </div>
+
       <Footer />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      </main>
-    </>
+    </div>
   );
 };
 
