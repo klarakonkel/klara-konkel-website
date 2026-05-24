@@ -93,7 +93,11 @@ const ProjectImage = ({ project }: { project: Project }) => {
 const Projects = () => (
   <section id="projects">
     <p className="label-tag">Feature Stories</p>
-    <h2 className="font-serif text-4xl font-bold mt-1 mb-8">Selected Work</h2>
+    <h2 className="font-serif text-4xl font-bold mt-1 mb-3">Selected Work</h2>
+    <p className="text-sm text-muted-foreground mb-8 max-w-prose">
+      I believe that building transferable skills is essential to keep evolving
+      personally and professionally. That&apos;s why I wear many hats:
+    </p>
 
     <div className="divide-y divide-border">
       {projects.map((p) => (
