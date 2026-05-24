@@ -46,7 +46,7 @@ const Index = () => {
               Rising junior at Minerva University — double major in Artificial Intelligence (CS) and Venture Building (business)
             </p>
           </div>
-          <p className="hidden md:block max-w-[210px] text-right text-sm leading-relaxed text-muted-foreground mt-1">
+          <p className="hidden md:block max-w-[210px] text-right font-serif font-bold text-sm leading-snug mt-1">
             Software Engineering &amp; Product Management.<br />
             Building technical solutions<br />
             through a human-centric lens.
