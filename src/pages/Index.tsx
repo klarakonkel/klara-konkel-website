@@ -4,6 +4,7 @@ import Experience from "@/components/sections/Experience";
 import Skills from "@/components/sections/Skills";
 import Footer from "@/components/sections/Footer";
 import { getPublicUrl } from "@/lib/utils";
+import { Github, Linkedin, Mail } from "lucide-react";
 
 const coordinates = [
   { dates: "2027 — 2028", city: "San Francisco, CA", note: "upcoming" },
@@ -75,6 +76,22 @@ const Index = () => {
                 </a>
               ))}
             </nav>
+          </div>
+
+          {/* Contact */}
+          <div className="space-y-2">
+            <a href="mailto:klaraa.konkel@gmail.com"
+               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Mail className="w-3.5 h-3.5 shrink-0" /> klaraa.konkel@gmail.com
+            </a>
+            <a href="https://linkedin.com/in/klara-konkel" target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Linkedin className="w-3.5 h-3.5 shrink-0" /> klara-konkel
+            </a>
+            <a href="https://github.com/klarakonkel" target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Github className="w-3.5 h-3.5 shrink-0" /> klarakonkel
+            </a>
           </div>
 
           {/* Globe */}
