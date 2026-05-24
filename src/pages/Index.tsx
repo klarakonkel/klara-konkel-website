@@ -2,22 +2,21 @@ import AnimatedGlobe from "@/components/sections/AnimatedGlobe";
 import Projects from "@/components/sections/Projects";
 import Experience from "@/components/sections/Experience";
 import Skills from "@/components/sections/Skills";
-import Contact from "@/components/sections/Contact";
 import Footer from "@/components/sections/Footer";
 import { getPublicUrl } from "@/lib/utils";
 
 const coordinates = [
-  { dates: "2025 — Present", city: "Tokyo, JP" },
-  { dates: "2024 — 2025",   city: "Buenos Aires, AR" },
-  { dates: "2023 — 2024",   city: "Berlin, DE" },
-  { dates: "2022 — 2023",   city: "San Francisco, CA" },
+  { dates: "2027 — 2028", city: "San Francisco, CA", note: "upcoming" },
+  { dates: "2026 — 2027", city: "Buenos Aires, AR",  note: "" },
+  { dates: "2025 — 2026", city: "Tokyo, JP",          note: "" },
+  { dates: "2024 — 2025", city: "San Francisco, CA",  note: "" },
+  { dates: "2023 — 2024", city: "Berlin, DE",          note: "" },
 ];
 
 const dispatch = [
   { href: "#projects",   label: "Selected Projects" },
   { href: "#experience", label: "Experience" },
   { href: "#skills",     label: "Skills & Stack" },
-  { href: "#contact",    label: "Get in Touch" },
 ];
 
 const Index = () => {
@@ -43,13 +42,14 @@ const Index = () => {
             <h1 className="font-serif text-6xl md:text-7xl font-bold tracking-tight leading-none">
               Klara Konkel
             </h1>
-            <p className="label-tag mt-2.5">Vol. 01 — Portfolio & Field Notes</p>
+            <p className="label-tag mt-2.5">
+              Rising junior at Minerva University — double major in Artificial Intelligence (CS) and Venture Building (business)
+            </p>
           </div>
           <p className="hidden md:block max-w-[210px] text-right text-sm leading-relaxed text-muted-foreground mt-1">
-            Software & AI Development.<br />
-            Building outcome-driven systems<br />
-            through an ownership lens.<br />
-            CS &amp; Business @ Minerva University.
+            Software Engineering &amp; Product Management.<br />
+            Building technical solutions<br />
+            through a human-centric lens.
           </p>
         </div>
       </header>
@@ -60,23 +60,7 @@ const Index = () => {
         {/* Sidebar */}
         <aside className="hidden lg:flex flex-col w-[210px] shrink-0 sticky top-8 self-start gap-8">
 
-          <AnimatedGlobe />
-
-          {/* Current coordinates */}
-          <div>
-            <p className="label-tag">Current Coordinates</p>
-            <hr className="mt-2 mb-4 border-border" />
-            <div className="space-y-4">
-              {coordinates.map((c) => (
-                <div key={c.city}>
-                  <p className="text-[10px] text-muted-foreground">{c.dates}</p>
-                  <p className="text-sm font-medium mt-0.5">{c.city}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Dispatch index */}
+          {/* Dispatch index — top of sidebar */}
           <div>
             <p className="label-tag">Dispatch Index</p>
             <hr className="mt-2 mb-4 border-border" />
@@ -93,6 +77,25 @@ const Index = () => {
             </nav>
           </div>
 
+          {/* Globe */}
+          <AnimatedGlobe />
+
+          {/* Current coordinates */}
+          <div>
+            <p className="label-tag">Current Coordinates</p>
+            <hr className="mt-2 mb-4 border-border" />
+            <div className="space-y-4">
+              {coordinates.map((c) => (
+                <div key={c.dates}>
+                  <p className="text-[10px] text-muted-foreground">
+                    {c.dates}{c.note ? ` · ${c.note}` : ""}
+                  </p>
+                  <p className="text-sm font-medium mt-0.5">{c.city}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Resume */}
           <a href={getPublicUrl("/resume.pdf")} download className="editorial-btn justify-center">
             ↓ &nbsp;Resume
@@ -104,7 +107,6 @@ const Index = () => {
           <Projects />
           <Experience />
           <Skills />
-          <Contact />
         </main>
       </div>
 

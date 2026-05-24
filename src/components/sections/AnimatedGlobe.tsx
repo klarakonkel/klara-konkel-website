@@ -46,13 +46,13 @@ const Earth = () => {
     <group ref={groupRef}>
       <mesh>
         <sphereGeometry args={[1, 128, 64]} />
-        <meshStandardMaterial 
-          map={texture} 
-          metalness={0.1}
-          roughness={0.6}
+        <meshStandardMaterial
+          map={texture}
+          metalness={0.0}
+          roughness={0.7}
           transparent={false}
-          emissive="#111111"
-          emissiveIntensity={0.2}
+          emissive="#000000"
+          emissiveIntensity={0}
         />
       </mesh>
 
@@ -69,14 +69,8 @@ const Earth = () => {
         </mesh>
       ))}
 
-      <ambientLight intensity={0.6} />
-      <directionalLight 
-        position={[10, 10, 5]} 
-        intensity={1.5} 
-        castShadow 
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-      />
+      <ambientLight intensity={2.2} />
+      <directionalLight position={[5, 5, 5]} intensity={1.8} />
     </group>
   );
 };
@@ -100,10 +94,7 @@ const AnimatedGlobe: React.FC = () => {
         <Earth />
       </Canvas>
 
-      {/* Subtle overlays for depth and theme harmony */}
-      <div className="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-br from-primary/20 via-transparent to-accent/20" />
-      <div className="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent mix-blend-multiply" />
-      <div className="absolute -inset-1 rounded-full bg-primary/30 blur-md pointer-events-none" />
+      <div className="absolute -inset-1 rounded-full bg-foreground/5 blur-lg pointer-events-none" />
     </div>
   );
 };
