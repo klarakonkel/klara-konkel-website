@@ -6,10 +6,11 @@ import Footer from "@/components/sections/Footer";
 import { getPublicUrl } from "@/lib/utils";
 
 const coordinates = [
-  { dates: "2025 — Present", city: "Tokyo, JP" },
-  { dates: "2024 — 2025",   city: "Buenos Aires, AR" },
-  { dates: "2023 — 2024",   city: "Berlin, DE" },
-  { dates: "2022 — 2023",   city: "San Francisco, CA" },
+  { dates: "2027 — 2028", city: "San Francisco, CA", note: "upcoming" },
+  { dates: "2026 — 2027", city: "Buenos Aires, AR",  note: "" },
+  { dates: "2025 — 2026", city: "Tokyo, JP",          note: "" },
+  { dates: "2024 — 2025", city: "San Francisco, CA",  note: "" },
+  { dates: "2023 — 2024", city: "Berlin, DE",          note: "" },
 ];
 
 const dispatch = [
@@ -45,10 +46,11 @@ const Index = () => {
               Rising junior at Minerva University — double major in Artificial Intelligence (CS) and Venture Building (business)
             </p>
           </div>
-          {/* Globe in top-right of masthead */}
-          <div className="hidden md:block shrink-0">
-            <AnimatedGlobe />
-          </div>
+          <p className="hidden md:block max-w-[210px] text-right text-sm leading-relaxed text-muted-foreground mt-1">
+            Software Engineering &amp; Product Management.<br />
+            Building technical solutions<br />
+            through a human-centric lens.
+          </p>
         </div>
       </header>
 
@@ -75,14 +77,19 @@ const Index = () => {
             </nav>
           </div>
 
+          {/* Globe */}
+          <AnimatedGlobe />
+
           {/* Current coordinates */}
           <div>
             <p className="label-tag">Current Coordinates</p>
             <hr className="mt-2 mb-4 border-border" />
             <div className="space-y-4">
               {coordinates.map((c) => (
-                <div key={c.city}>
-                  <p className="text-[10px] text-muted-foreground">{c.dates}</p>
+                <div key={c.dates}>
+                  <p className="text-[10px] text-muted-foreground">
+                    {c.dates}{c.note ? ` · ${c.note}` : ""}
+                  </p>
                   <p className="text-sm font-medium mt-0.5">{c.city}</p>
                 </div>
               ))}
