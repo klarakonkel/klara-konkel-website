@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { getPublicUrl } from "@/lib/utils";
-import { ExternalLink, Expand } from "lucide-react";
+import { ExternalLink, Expand, X } from "lucide-react";
 
 type Project = {
   title: string;
-  short: string;       // label inside the circle
+  short: string;
   category: string;
   desc: string;
   stack: string[];
-  tags: string[];      // skills learned
+  tags: string[];
   imageUrl: string;
   codeUrl: string;
   previewPdfUrl?: string;
   codePrivate?: boolean;
-  pos: number;         // 0 = pure software, 100 = pure product management
+  x: number;  // -100 (systems thinking) → +100 (user & stakeholder empathy)
+  y: number;  // -100 (product strategy)  → +100 (technical execution)
 };
 
 const projects: Project[] = [
@@ -29,7 +30,7 @@ const projects: Project[] = [
     previewPdfUrl: "/slack%20bot%20demo%20canva.pdf",
     codeUrl: "https://github.com/klarakonkel/overdue-invoice-reminders.git",
     codePrivate: true,
-    pos: 15,
+    x: 77, y: -50,
   },
   {
     title: "Gmail Inbox Automation",
@@ -41,7 +42,7 @@ const projects: Project[] = [
     imageUrl: "/n8n inbox logic.png",
     codeUrl: "",
     codePrivate: true,
-    pos: 35,
+    x: 90, y: -90,
   },
   {
     title: "Context — Cultural Translation",
@@ -53,9 +54,13 @@ const projects: Project[] = [
     imageUrl: "/context%20preview.png",
     codeUrl: "https://github.com/aokumo-yh/contextai",
     codePrivate: false,
-    pos: 62,
+    x: 70, y: 80,
   },
 ];
+
+// Convert coordinate space (-100..100) to screen percentage (0..100)
+const sx = (v: number) => `${(v + 100) / 2}%`;
+const sy = (v: number) => `${(100 - v) / 2}%`;  // flip: y=100 → top
 
 const ProjectImage = ({ project }: { project: Project }) => {
   const src = getPublicUrl(project.imageUrl);
@@ -65,7 +70,7 @@ const ProjectImage = ({ project }: { project: Project }) => {
         <DialogTrigger className="relative group w-full h-full cursor-pointer block">
           <img src={src} alt={project.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
-            <Expand className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Expand className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </DialogTrigger>
         <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 flex flex-col overflow-hidden">
@@ -86,7 +91,7 @@ const ProjectImage = ({ project }: { project: Project }) => {
       <DialogTrigger className="relative group w-full h-full cursor-pointer block">
         <img src={src} alt={project.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
-          <Expand className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Expand className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </DialogTrigger>
       <DialogContent className="max-w-4xl w-full p-0">
@@ -104,84 +109,117 @@ const Projects = () => {
     <section id="projects">
       <p className="label-tag">Feature Stories</p>
       <h2 className="font-serif text-4xl font-bold mt-1 mb-3">Selected Work</h2>
-      <p className="text-sm text-muted-foreground mb-10 max-w-prose">
+      <p className="text-sm text-muted-foreground mb-8 max-w-prose">
         I believe that building transferable skills is essential to keep evolving
         personally and professionally. That&apos;s why I wear many hats:
       </p>
 
-      {/* ── Spectrum ── */}
-      <div>
-        <div className="flex justify-between mb-3">
-          <span className="label-tag">Software Engineering</span>
-          <span className="label-tag">Product Management</span>
+      {/* ── XY Matrix ── */}
+      <div className="relative w-full aspect-square max-w-xl border border-border">
+
+        {/* Axis lines */}
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-border/60 -translate-y-1/2" />
+        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border/60 -translate-x-1/2" />
+
+        {/* Wall labels */}
+        {/* Top */}
+        <div className="absolute top-0 left-0 right-0 flex justify-center pt-2 pointer-events-none">
+          <span className="label-tag">Technical (Execution)</span>
+        </div>
+        {/* Bottom */}
+        <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-2 pointer-events-none">
+          <span className="label-tag">Product Strategy</span>
+        </div>
+        {/* Left */}
+        <div className="absolute left-0 top-0 bottom-0 flex items-center justify-center w-8 pointer-events-none">
+          <span className="label-tag whitespace-nowrap" style={{ transform: 'rotate(-90deg)' }}>
+            Systems Thinking
+          </span>
+        </div>
+        {/* Right */}
+        <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-8 pointer-events-none">
+          <span className="label-tag whitespace-nowrap" style={{ transform: 'rotate(90deg)' }}>
+            User &amp; Stakeholder Empathy
+          </span>
         </div>
 
-        <div className="relative h-28 select-none">
-          {/* Track */}
-          <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-border" />
+        {/* Project dots */}
+        {projects.map((p) => (
+          <button
+            key={p.title}
+            style={{ left: sx(p.x), top: sy(p.y) }}
+            onClick={() => setSelected(selected === p.title ? null : p.title)}
+            className={`
+              absolute -translate-x-1/2 -translate-y-1/2
+              w-16 h-16 rounded-full border
+              flex items-center justify-center text-center
+              transition-all duration-200 cursor-pointer z-10
+              ${selected === p.title
+                ? "bg-foreground text-background border-foreground scale-110 shadow-md"
+                : "bg-background border-border hover:border-foreground hover:scale-105"}
+            `}
+          >
+            <span className="text-[9px] font-semibold leading-tight tracking-wide uppercase px-2">
+              {p.short}
+            </span>
+          </button>
+        ))}
 
-          {projects.map((p) => (
-            <button
-              key={p.title}
-              onClick={() => setSelected(selected === p.title ? null : p.title)}
-              style={{ left: `${p.pos}%` }}
-              className={`
-                absolute top-1/2 -translate-y-1/2 -translate-x-1/2
-                w-20 h-20 rounded-full border
-                flex items-center justify-center
-                transition-all duration-200 cursor-pointer
-                ${selected === p.title
-                  ? "bg-foreground text-background border-foreground scale-110 shadow-md"
-                  : "bg-background border-border hover:border-foreground hover:scale-105"}
-              `}
-            >
-              <span className="text-[9px] font-semibold leading-tight tracking-wide uppercase text-center px-2">
-                {p.short}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Expanded detail ── */}
-      <div className={`overflow-hidden transition-all duration-300 ${active ? "max-h-[600px] opacity-100 mt-6" : "max-h-0 opacity-0"}`}>
+        {/* ── Expanded overlay ── */}
         {active && (
-          <div className="border-t border-border pt-6 flex flex-col md:flex-row gap-8">
-            {/* Image */}
-            <div className="md:w-[50%] shrink-0 aspect-[4/3] overflow-hidden bg-muted rounded-sm">
-              {active.imageUrl
-                ? <ProjectImage project={active} />
-                : <div className="w-full h-full flex items-center justify-center"><span className="label-tag">Preview coming soon</span></div>
-              }
-            </div>
-            {/* Text */}
-            <div className="flex flex-col justify-center">
-              <p className="label-tag">{active.category}</p>
-              <h3 className="font-serif text-2xl font-bold mt-2 leading-snug">{active.title}</h3>
-              <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{active.desc}</p>
-              <p className="mt-3 text-xs text-muted-foreground">{active.stack.join(" · ")}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {active.tags.map((tag) => (
-                  <span key={tag} className="text-[10px] tracking-wide border border-border px-2.5 py-1 text-muted-foreground">
-                    {tag}
-                  </span>
-                ))}
+          <div className="absolute inset-0 bg-background/98 z-20 p-5 overflow-auto flex flex-col">
+            {/* Header row */}
+            <div className="flex items-start justify-between mb-4 shrink-0">
+              <div>
+                <p className="label-tag">{active.category}</p>
+                <h3 className="font-serif text-xl font-bold mt-1 leading-snug">{active.title}</h3>
               </div>
-              <div className="mt-5">
-                {active.codePrivate ? (
-                  <Dialog>
-                    <DialogTrigger className="editorial-btn">
+              <button
+                onClick={() => setSelected(null)}
+                className="ml-4 shrink-0 w-7 h-7 flex items-center justify-center border border-border hover:bg-muted transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex flex-col sm:flex-row gap-5 flex-1 min-h-0">
+              {/* Image */}
+              <div className="sm:w-[48%] shrink-0 aspect-video overflow-hidden bg-muted rounded-sm">
+                {active.imageUrl
+                  ? <ProjectImage project={active} />
+                  : <div className="w-full h-full flex items-center justify-center"><span className="label-tag">Preview coming soon</span></div>
+                }
+              </div>
+
+              {/* Details */}
+              <div className="flex flex-col justify-start overflow-auto">
+                <p className="text-sm text-muted-foreground leading-relaxed">{active.desc}</p>
+                <p className="mt-3 text-xs text-muted-foreground">{active.stack.join(" · ")}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {active.tags.map((tag) => (
+                    <span key={tag} className="text-[10px] tracking-wide border border-border px-2 py-0.5 text-muted-foreground">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  {active.codePrivate ? (
+                    <Dialog>
+                      <DialogTrigger className="editorial-btn">
+                        <ExternalLink className="w-3.5 h-3.5" /> See Code
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm">
+                        <p className="text-sm text-muted-foreground">This project is private. Hit me up for a sanitized version!</p>
+                      </DialogContent>
+                    </Dialog>
+                  ) : active.codeUrl ? (
+                    <a href={active.codeUrl} target="_blank" rel="noopener noreferrer" className="editorial-btn">
                       <ExternalLink className="w-3.5 h-3.5" /> See Code
-                    </DialogTrigger>
-                    <DialogContent className="max-w-sm">
-                      <p className="text-sm text-muted-foreground">This project is private. Hit me up for a sanitized version!</p>
-                    </DialogContent>
-                  </Dialog>
-                ) : active.codeUrl ? (
-                  <a href={active.codeUrl} target="_blank" rel="noopener noreferrer" className="editorial-btn">
-                    <ExternalLink className="w-3.5 h-3.5" /> See Code
-                  </a>
-                ) : null}
+                    </a>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
