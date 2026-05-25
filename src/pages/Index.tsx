@@ -79,7 +79,10 @@ const Index = () => {
           </div>
 
           {/* Contact */}
-          <div className="space-y-2">
+          <div>
+            <p className="label-tag">Contact</p>
+            <hr className="mt-2 mb-4 border-border" />
+            <div className="space-y-2">
             <a href="mailto:klaraa.konkel@gmail.com"
                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <Mail className="w-3.5 h-3.5 shrink-0" /> klaraa.konkel@gmail.com
@@ -92,6 +95,7 @@ const Index = () => {
                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <Github className="w-3.5 h-3.5 shrink-0" /> klarakonkel
             </a>
+            </div>
           </div>
 
           {/* Globe */}
