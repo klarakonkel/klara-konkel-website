@@ -95,6 +95,29 @@ const AnimatedGlobe: React.FC = () => {
       </Canvas>
 
       <div className="absolute -inset-1 rounded-full bg-foreground/5 blur-lg pointer-events-none" />
+
+      {/* Curved hint text along the top-right arc of the globe */}
+      <svg
+        viewBox="0 0 192 192"
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        aria-hidden="true"
+      >
+        <defs>
+          {/* Arc from 12-o'clock going clockwise ~95° into the right side */}
+          <path id="globeArcHint" d="M 96 8 A 88 88 0 0 1 184 104" />
+        </defs>
+        <text
+          fill="hsl(30, 10%, 48%)"
+          fontSize="6"
+          letterSpacing="0.5"
+          fontFamily="Inter, sans-serif"
+          textRendering="optimizeLegibility"
+        >
+          <textPath href="#globeArcHint" startOffset="4%">
+            Grab and drag to see where Klara studies!
+          </textPath>
+        </text>
+      </svg>
     </div>
   );
 };
