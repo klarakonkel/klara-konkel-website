@@ -2,6 +2,7 @@ import AnimatedGlobe from "@/components/sections/AnimatedGlobe";
 import Projects from "@/components/sections/Projects";
 import Experience from "@/components/sections/Experience";
 import Skills from "@/components/sections/Skills";
+import AboutMe from "@/components/sections/AboutMe";
 import Footer from "@/components/sections/Footer";
 import { getPublicUrl } from "@/lib/utils";
 import { Github, Linkedin, Mail } from "lucide-react";
@@ -18,6 +19,7 @@ const dispatch = [
   { href: "#projects",   label: "Selected Projects" },
   { href: "#experience", label: "Experience" },
   { href: "#skills",     label: "Skills & Stack" },
+  { href: "#about",      label: "About Me" },
 ];
 
 const Index = () => {
@@ -101,6 +103,10 @@ const Index = () => {
           {/* Globe */}
           <AnimatedGlobe />
 
+          <a href="#about" className="text-xs text-muted-foreground hover:text-foreground transition-colors italic -mt-4">
+            Why is Klara moving so much?
+          </a>
+
           {/* Current coordinates */}
           <div>
             <p className="label-tag">Current Coordinates</p>
@@ -128,6 +134,7 @@ const Index = () => {
           <Experience />
           <Projects />
           <Skills />
+          <AboutMe />
         </main>
       </div>
 
