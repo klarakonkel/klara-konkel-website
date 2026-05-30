@@ -104,7 +104,7 @@ const AnimatedGlobe: React.FC = () => {
       >
         <defs>
           {/* Arc from 12-o'clock going clockwise ~95° into the right side */}
-          <path id="globeArcHint" d="M 112 5 A 92 92 0 0 1 187 109" />
+          <path id="globeArcHint" d="M 120 4 A 98 92 0 0 3 193 107" />
         </defs>
         <text
           fill="hsl(30, 10%, 48%)"
