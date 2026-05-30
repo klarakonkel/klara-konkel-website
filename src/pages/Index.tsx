@@ -61,7 +61,7 @@ const Index = () => {
       <div className="container flex gap-12 py-10 items-start">
 
         {/* Sidebar */}
-        <aside className="hidden lg:flex flex-col w-[210px] shrink-0 sticky top-8 self-start gap-8">
+        <aside className="hidden md:flex flex-col w-[170px] lg:w-[210px] shrink-0 sticky top-8 self-start gap-8">
 
           {/* Dispatch index — top of sidebar */}
           <div>
