@@ -77,7 +77,7 @@ const Earth = () => {
 
 const AnimatedGlobe: React.FC = () => {
   return (
-    <div className="relative mx-auto h-48 w-48 md:h-56 md:w-56" aria-label="Interactive 3D globe with city markers - drag to explore">
+    <div className="relative mx-auto w-full aspect-square max-w-[200px]" aria-label="Interactive 3D globe with city markers - drag to explore">
       <Canvas 
         camera={{ position: [0, 0, 2.6], fov: 45 }} 
         dpr={[1, 2]} 
@@ -104,7 +104,7 @@ const AnimatedGlobe: React.FC = () => {
       >
         <defs>
           {/* Arc from 12-o'clock going clockwise ~95° into the right side */}
-          <path id="globeArcHint" d="M 96 8 A 88 88 0 0 1 184 104" />
+          <path id="globeArcHint" d="M 112 5 A 92 92 0 0 1 187 109" />
         </defs>
         <text
           fill="hsl(30, 10%, 48%)"
