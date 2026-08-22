@@ -75,9 +75,17 @@ const Earth = () => {
   );
 };
 
-const AnimatedGlobe: React.FC = () => {
+type AnimatedGlobeProps = {
+  className?: string;
+  showHint?: boolean;
+};
+
+const AnimatedGlobe: React.FC<AnimatedGlobeProps> = ({
+  className = "mx-auto w-full aspect-square max-w-[200px]",
+  showHint = true,
+}) => {
   return (
-    <div className="relative mx-auto w-full aspect-square max-w-[200px]" aria-label="Interactive 3D globe with city markers - drag to explore">
+    <div className={`relative ${className}`} aria-label="Interactive 3D globe with city markers - drag to explore">
       <Canvas 
         camera={{ position: [0, 0, 2.6], fov: 45 }} 
         dpr={[1, 2]} 
@@ -97,27 +105,29 @@ const AnimatedGlobe: React.FC = () => {
       <div className="absolute -inset-1 rounded-full bg-foreground/5 blur-lg pointer-events-none" />
 
       {/* Curved hint text along the top-right arc of the globe */}
-      <svg
-        viewBox="0 0 192 192"
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        aria-hidden="true"
-      >
-        <defs>
-          {/* Arc from 12-o'clock going clockwise ~95° into the right side */}
-          <path id="globeArcHint" d="M 112 5 A 92 92 0 0 1 187 109" />
-        </defs>
-        <text
-          fill="hsl(30, 10%, 48%)"
-          fontSize="6"
-          letterSpacing="0.5"
-          fontFamily="Inter, sans-serif"
-          textRendering="optimizeLegibility"
+      {showHint && (
+        <svg
+          viewBox="0 0 192 192"
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          aria-hidden="true"
         >
-          <textPath href="#globeArcHint" startOffset="4%">
-            Grab and drag to see where Klara studies!
-          </textPath>
-        </text>
-      </svg>
+          <defs>
+            {/* Arc from 12-o'clock going clockwise ~95° into the right side */}
+            <path id="globeArcHint" d="M 112 5 A 92 92 0 0 1 187 109" />
+          </defs>
+          <text
+            fill="hsl(var(--muted-foreground))"
+            fontSize="6"
+            letterSpacing="0.5"
+            fontFamily="Inter, sans-serif"
+            textRendering="optimizeLegibility"
+          >
+            <textPath href="#globeArcHint" startOffset="4%">
+              grab and drag to see where klara has lived!
+            </textPath>
+          </text>
+        </svg>
+      )}
     </div>
   );
 };

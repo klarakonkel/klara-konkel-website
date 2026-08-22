@@ -4,85 +4,91 @@
 
 @layer base {
   :root {
-    --background: 38 28% 96%;
-    --foreground: 25 20% 10%;
+    /* Warm off-white, monochrome palette — inspired by Reti */
+    --background: 40 16% 96%;
+    --foreground: 24 8% 15%;
 
-    --card: 38 22% 94%;
-    --card-foreground: 25 20% 10%;
+    --card: 40 16% 96%;
+    --card-foreground: 24 8% 15%;
 
-    --popover: 38 28% 96%;
-    --popover-foreground: 25 20% 10%;
+    --popover: 40 16% 97%;
+    --popover-foreground: 24 8% 15%;
 
-    --primary: 247 58% 45%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 24 8% 15%;
+    --primary-foreground: 40 16% 97%;
 
-    --secondary: 35 20% 90%;
-    --secondary-foreground: 25 20% 15%;
+    --secondary: 38 12% 90%;
+    --secondary-foreground: 24 8% 18%;
 
-    --muted: 35 18% 91%;
-    --muted-foreground: 30 10% 48%;
+    --muted: 38 12% 91%;
+    --muted-foreground: 30 5% 52%;
 
-    --accent: 282 65% 57%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 38 12% 90%;
+    --accent-foreground: 24 8% 18%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 40 16% 97%;
 
-    --border: 32 18% 82%;
-    --input: 32 18% 82%;
-    --ring: 247 58% 45%;
+    --border: 30 10% 85%;
+    --input: 30 10% 85%;
+    --ring: 24 8% 30%;
 
-    --radius: 0.4rem;
+    --radius: 0.5rem;
+  }
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  .dark {
+    --background: 30 7% 9%;
+    --foreground: 40 12% 90%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
-    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.20);
-    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --card: 30 7% 9%;
+    --card-foreground: 40 12% 90%;
+
+    --popover: 30 7% 11%;
+    --popover-foreground: 40 12% 90%;
+
+    --primary: 40 12% 90%;
+    --primary-foreground: 30 7% 9%;
+
+    --secondary: 30 6% 16%;
+    --secondary-foreground: 40 12% 88%;
+
+    --muted: 30 6% 15%;
+    --muted-foreground: 35 6% 58%;
+
+    --accent: 30 6% 16%;
+    --accent-foreground: 40 12% 88%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 40 12% 90%;
+
+    --border: 30 6% 22%;
+    --input: 30 6% 22%;
+    --ring: 40 12% 70%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
   html { scroll-behavior: smooth; }
-  body { @apply bg-background text-foreground font-sans; }
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
 }
 
 @layer utilities {
-  /* Spaced uppercase label — used for section identifiers */
+  /* Caption / label treatment — carried over from the previous site:
+     spaced, uppercase, muted. */
   .label-tag {
-    font-size: 0.65rem;
-    letter-spacing: 0.18em;
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: hsl(var(--muted-foreground));
     font-weight: 500;
   }
 
-  /* Editorial CTA button */
-  .editorial-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: 1px solid hsl(var(--foreground));
-    padding: 0.45rem 1rem;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-    color: hsl(var(--foreground));
-    transition: background 0.18s, color 0.18s;
-    text-decoration: none;
-  }
-  .editorial-btn:hover {
-    background: hsl(var(--foreground));
-    color: hsl(var(--background));
-  }
-
+  /* Underlined-on-hover inline link */
   .story-link {
     position: relative;
     display: inline-block;
@@ -94,11 +100,59 @@
     height: 1px; width: 100%;
     transform: scaleX(0);
     transform-origin: bottom right;
-    background: hsl(var(--foreground));
+    background: currentColor;
     transition: transform 280ms ease;
   }
   .story-link:hover::after {
     transform: scaleX(1);
     transform-origin: bottom left;
+  }
+
+  /* Pill button used by the work-page role filter */
+  .role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 9999px;
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
+    color: hsl(var(--foreground));
+    background: transparent;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .role-pill:hover {
+    border-color: hsl(var(--foreground));
+  }
+  .role-pill[data-active="true"] {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+    border-color: hsl(var(--foreground));
+  }
+
+  /* Outlined CTA */
+  .ghost-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 9999px;
+    padding: 0.55rem 1.15rem;
+    font-size: 0.9rem;
+    color: hsl(var(--foreground));
+    transition: border-color 0.18s ease, background 0.18s ease;
+    text-decoration: none;
+  }
+  .ghost-btn:hover {
+    border-color: hsl(var(--foreground));
+    background: hsl(var(--muted));
+  }
+
+  /* Dimmed state for filtered-out work lines (phareth-style) */
+  .dimmed {
+    color: hsl(var(--muted-foreground) / 0.35);
+    transition: color 0.25s ease, opacity 0.25s ease;
   }
 }
