@@ -151,7 +151,7 @@ const Work = () => {
       <Nav />
 
       <main className="container flex-1 pt-6 md:pt-10 max-w-4xl">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">work</h1>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">work + projects</h1>
 
         {/* ── Filter ── */}
         <div className="flex flex-wrap items-center gap-2.5 mb-12">

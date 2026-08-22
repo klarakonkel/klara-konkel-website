@@ -67,7 +67,7 @@ const Home = () => {
                 <span className="text-foreground">cs &amp; business</span> @ minerva
               </p>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-6">
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight leading-[1.15] mb-6">
                 building at the intersection of{" "}
                 <span className="underline decoration-2 underline-offset-[6px]">software</span>,{" "}
                 <span className="underline decoration-2 underline-offset-[6px]">ai</span> &amp;{" "}
