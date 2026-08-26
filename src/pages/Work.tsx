@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Nav from "@/components/layout/Nav";
 import SiteFooter from "@/components/layout/SiteFooter";
+import { getPublicUrl } from "@/lib/utils";
 
 /* ── Roles ── */
 const ROLES = [
@@ -11,167 +12,359 @@ const ROLES = [
 ] as const;
 type Role = (typeof ROLES)[number];
 
-/* ── tl;dr clauses (each tagged with the roles it belongs to) ── */
-type Clause = { node: ReactNode; roles: Role[] };
-const tldr: Clause[] = [
-  {
-    node: (
-      <>
-        built bots, API integrations &amp; a{" "}
-        <strong>real-time billing dashboard</strong> at almedia
-      </>
-    ),
-    roles: ["software & automation", "product"],
-  },
-  {
-    node: (
-      <>
-        cut a finance team&apos;s manual inbox work by{" "}
-        <strong>~2 hrs/day</strong> with an intent-routing n8n automation
-      </>
-    ),
-    roles: ["software & automation", "ai & ml"],
-  },
-  {
-    node: (
-      <>
-        led a <strong>10-person</strong> team and secured{" "}
-        <strong>$10k</strong> from google &amp; perplexity for a global hackathon
-      </>
-    ),
-    roles: ["leadership & gtm"],
-  },
-  {
-    node: <>shipped a real-time cultural-translation tool on the claude api</>,
-    roles: ["product", "ai & ml"],
-  },
-  {
-    node: (
-      <>
-        led product on sustainable 3d-printed running shoes, partnered with{" "}
-        modwall for distribution
-      </>
-    ),
-    roles: ["product", "leadership & gtm"],
-  },
-];
+type Media = { type: "image" | "video"; src: string; alt: string };
 
-/* ── Experience & projects ── */
-type Entry = {
-  org: string;
-  meta: string;
-  title: string;
-  bullets: string[];
-  roles: Role[];
+type SubProject = {
+  name: string;
+  desc: string;
+  learnings: string[];
+  media?: Media;
   href?: string;
 };
 
-const experience: Entry[] = [
+type Item = {
+  id: string;
+  group: "experience" | "projects";
+  org: string;
+  title: string; // role or one-line tagline
+  meta: string; // dates · location  OR  stack
+  roles: Role[];
+  blurb: string; // shown in the left-hand row
+  detailLabel: string; // heading above the detail cards
+  projects: SubProject[];
+};
+
+/* ── Data ── */
+const EXPERIENCE: Item[] = [
   {
+    id: "almedia",
+    group: "experience",
     org: "almedia",
-    meta: "working student",
-    title: "finance automations",
-    bullets: [
-      "built automation solutions — bots, API integrations, and a billing dashboard with real-time sync",
-      "shipped a full-stack billing page for customers end-to-end",
+    title: "software engineer · working student",
+    meta: "berlin · jun 2025 – present",
+    roles: ["software & automation", "ai & ml", "product"],
+    blurb:
+      "built the accounts-receivable platform end-to-end — billing service, performance, integrations & ml reconciliation",
+    detailLabel: "what i built at almedia",
+    projects: [
+      {
+        name: "accounts-receivable billing service",
+        desc: "architected and shipped a python / fastapi a/r service using hexagonal architecture that isolates domain logic from i/o for testability, replacing a manual spreadsheet-and-script process. instrumented with structured logging and metrics/alerts for billing-run observability — now bills ~1,500 revenue lines/month across 400 active clients.",
+        learnings: ["fastapi", "hexagonal architecture", "observability", "python"],
+      },
+      {
+        name: "215× faster finance dashboard",
+        desc: "root-caused a bottleneck where each dashboard load triggered a 32.9 gb scan of 310k rows across 7+ heterogeneous sources (bigquery, mysql, mongodb, postgres). redesigned the data path as a monthly pre-aggregation into an indexed table — cutting p50 load time from 67s to 0.3s (~215×) and ~$310/month in query cost.",
+        learnings: ["profiling", "query optimization", "bigquery", "data modeling"],
+      },
+      {
+        name: "integrations & reliability",
+        desc: "built a bidirectional hubspot ↔ easybill sync over webhooks with deduplication and ordering logic to survive bursty, out-of-order delivery. eliminated data loss during third-party outages with a durable retry queue (exponential backoff, 1–30 min), and enforced per-account-manager access at the database layer via postgres row-level security.",
+        learnings: ["webhooks", "idempotency", "postgres rls", "fault tolerance"],
+      },
+      {
+        name: "overdue-invoice slack bot",
+        desc: "reduced the overdue share of open invoices from 40% to 17–25% by building a slack bot that reconciled unpaid invoices against easybill and pushed automated reminders to 100+ client channels plus per-account-manager summaries.",
+        learnings: ["slack api", "automation", "reconciliation"],
+        media: { type: "image", src: "/slack%20bot%20preview.png", alt: "overdue-invoice Slack bot" },
+      },
+      {
+        name: "ml reconciliation engine — in progress",
+        desc: "building an invoice-payment reconciliation engine: a deterministic candidate generator (subset-sum for many-to-many matches) feeds a gradient-boosted ranker (lightgbm) whose calibrated probabilities drive a confidence-thresholded decision — auto-confirming high-precision matches and routing ambiguous cases to human review.",
+        learnings: ["lightgbm", "calibration", "precision@threshold", "subset-sum"],
+      },
     ],
-    roles: ["software & automation", "product"],
   },
   {
+    id: "ai-consensus",
+    group: "experience",
     org: "ai consensus",
-    meta: "hackathon lead · head of partnerships",
-    title: "leadership & partnerships",
-    bullets: [
-      "led a 10-person team to run a global hackathon",
-      "secured $10k in sponsorships from google & perplexity",
-    ],
+    title: "hackathon lead · head of partnerships",
+    meta: "2024",
     roles: ["leadership & gtm"],
+    blurb: "led a 10-person team and raised $10k for a global hackathon",
+    detailLabel: "what i led",
+    projects: [
+      {
+        name: "global hackathon",
+        desc: "led a 10-person team to run a global hackathon end-to-end, and — as head of partnerships — secured $10k in sponsorships from google & perplexity.",
+        learnings: ["team leadership", "partnerships", "sponsorship", "event ops"],
+      },
+    ],
   },
   {
+    id: "printive",
+    group: "experience",
     org: "printive",
-    meta: "product team lead",
-    title: "sustainable footwear",
-    bullets: [
-      "designed sustainable 3d-printed running shoes with detachable soles",
-      "partnered with modwall for distribution",
-    ],
+    title: "product team lead",
+    meta: "",
     roles: ["product", "leadership & gtm"],
+    blurb: "led product on sustainable 3d-printed running shoes",
+    detailLabel: "what i shipped",
+    projects: [
+      {
+        name: "sustainable footwear",
+        desc: "led the product team designing sustainable 3d-printed running shoes with detachable soles, and partnered with modwall for distribution.",
+        learnings: ["product ownership", "hardware", "sustainability", "partnerships"],
+      },
+    ],
   },
 ];
 
-const projects: Entry[] = [
+const PROJECTS: Item[] = [
   {
-    org: "overdue invoice bot",
-    meta: "python · automation",
-    title: "a/r follow-up automation",
-    bullets: [
-      "reduced average invoice payment time and administrative A/R hours",
-      "integrated notion, easybill, slack, and telegram APIs",
-    ],
-    roles: ["software & automation"],
-    href: "https://github.com/klarakonkel/overdue-invoice-reminders.git",
-  },
-  {
-    org: "gmail inbox automation",
-    meta: "n8n · finance ops",
-    title: "intent-based email routing",
-    bullets: [
-      "classified emails by intent and routed invoices straight to accounting software",
-      "auto-tagged from 900 client labels, cutting ~2 hrs of manual work daily",
-    ],
-    roles: ["software & automation", "ai & ml"],
-  },
-  {
+    id: "context",
+    group: "projects",
     org: "context",
-    meta: "react · claude api",
     title: "real-time cultural translation",
-    bullets: [
-      "surfaces implicit cultural cues and tone during international calls",
-      "gives real-time feedback to adjust approach and close more deals",
-    ],
+    meta: "react · typescript · claude api",
     roles: ["product", "ai & ml"],
-    href: "https://github.com/aokumo-yh/contextai",
+    blurb: "surfaces implicit cultural cues during international calls",
+    detailLabel: "about the project",
+    projects: [
+      {
+        name: "context",
+        desc: "real-time translation that picks up cultural cues during international calls — analyzing tone and communication style to reveal implicit signals and giving live feedback to adjust your approach and close more deals.",
+        learnings: ["product strategy", "llm apps", "real-time ux", "cross-cultural design"],
+        media: { type: "image", src: "/context%20preview.png", alt: "Context preview" },
+        href: "https://github.com/aokumo-yh/contextai",
+      },
+    ],
+  },
+  {
+    id: "gmail-inbox",
+    group: "projects",
+    org: "gmail inbox automation",
+    title: "intent-based email routing",
+    meta: "n8n · gmail api",
+    roles: ["software & automation", "ai & ml"],
+    blurb: "classifies and routes a finance inbox, saving ~2 hrs/day",
+    detailLabel: "about the project",
+    projects: [
+      {
+        name: "gmail inbox automation",
+        desc: "automated a finance department's inbox — classifying emails by intent, routing invoice submissions straight to accounting software, and auto-tagging from 900 client labels. cut ~2 hours of manual work per day.",
+        learnings: ["workflow design", "email classification", "process optimization"],
+        media: { type: "image", src: "/n8n%20inbox%20logic.png", alt: "n8n inbox logic" },
+      },
+    ],
+  },
+  {
+    id: "gym-optimizer",
+    group: "projects",
+    org: "gym split optimizer",
+    title: "constraint-based scheduler",
+    meta: "python · algorithms",
+    roles: ["software & automation"],
+    blurb: "graph-coloring workout scheduler with complexity analysis",
+    detailLabel: "about the project",
+    projects: [
+      {
+        name: "gym split optimizer",
+        desc: "a scheduler that generates optimized weekly workout splits under availability and muscle-group recovery constraints. modeled recovery conflicts as a graph-coloring problem and solved with backtracking search plus a most-constrained-variable heuristic to prune the space; documented data-structure tradeoffs and complexity analysis in the readme.",
+        learnings: ["graph coloring", "backtracking", "np-hard", "complexity analysis"],
+      },
+    ],
+  },
+  {
+    id: "aigency",
+    group: "projects",
+    org: "aigency",
+    title: "conversational automation agent",
+    meta: "qlora · pytorch · hugging face hackathon",
+    roles: ["ai & ml"],
+    blurb: "fine-tuned llama-3-8b to turn conversations into automations",
+    detailLabel: "about the project",
+    projects: [
+      {
+        name: "aigency",
+        desc: "hugging face hackathon (dec 2025): an agent that joins a call, elicits a worker's repetitive task from natural conversation, and generates a deployable automation. fine-tuned llama-3-8b with qlora (4-bit quantization + lora adapters) via transformers / peft on a t4 gpu.",
+        learnings: ["qlora", "fine-tuning", "pytorch", "agents"],
+      },
+    ],
   },
 ];
 
-/* ── Component ── */
-const Work = () => {
-  const [active, setActive] = useState<Role[]>([]);
+const ALL = [...EXPERIENCE, ...PROJECTS];
 
-  const toggle = (role: Role) =>
-    setActive((prev) =>
+/* ── Detail panel ── */
+const Detail = ({ item }: { item: Item }) => (
+  <div>
+    <p className="label-tag">{item.group === "experience" ? "experience" : "project"}</p>
+    <h3 className="text-2xl font-bold mt-1">{item.org}</h3>
+    <p className="text-sm text-muted-foreground mt-1">
+      <span className="italic">{item.title}</span>
+      {item.meta && <> · {item.meta}</>}
+    </p>
+
+    <p className="label-tag mt-6 mb-4">{item.detailLabel}</p>
+
+    <div className="space-y-7">
+      {item.projects.map((p) => (
+        <div key={p.name}>
+          {p.media &&
+            (p.media.type === "video" ? (
+              <video
+                src={getPublicUrl(p.media.src)}
+                controls
+                className="w-full rounded-md border border-border mb-3"
+              />
+            ) : (
+              <img
+                src={getPublicUrl(p.media.src)}
+                alt={p.media.alt}
+                loading="lazy"
+                className="w-full rounded-md border border-border mb-3 object-cover max-h-56"
+              />
+            ))}
+
+          <p className="text-[15px] font-semibold">{p.name}</p>
+          <p className="text-[15px] text-muted-foreground leading-relaxed mt-1.5">
+            {p.desc}
+          </p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="label-tag mr-1">learnings</span>
+            {p.learnings.map((tag) => (
+              <span
+                key={tag}
+                className="text-[11px] tracking-wide border border-border rounded-full px-2.5 py-0.5 text-muted-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          {p.href && (
+            <a
+              href={p.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-3 text-sm story-link text-foreground"
+            >
+              see code →
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/* ── Left-hand row ── */
+const Row = ({
+  item,
+  active,
+  dimmed,
+  onActivate,
+  onToggle,
+}: {
+  item: Item;
+  active: boolean;
+  dimmed: boolean;
+  onActivate: () => void;
+  onToggle: () => void;
+}) => (
+  <div className={dimmed ? "opacity-30 transition-opacity" : "transition-opacity"}>
+    <button
+      type="button"
+      onMouseEnter={onActivate}
+      onFocus={onActivate}
+      onClick={onToggle}
+      className={`w-full text-left py-4 pl-4 -ml-4 border-l-2 transition-colors ${
+        active
+          ? "border-foreground"
+          : "border-transparent hover:border-border"
+      }`}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <h3 className="text-lg">
+          <span className="font-semibold">{item.org}</span>{" "}
+          <span className="text-muted-foreground italic text-base">· {item.title}</span>
+        </h3>
+        {item.meta && <span className="label-tag">{item.meta}</span>}
+      </div>
+      <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{item.blurb}</p>
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        {item.roles.map((r) => (
+          <span
+            key={r}
+            className="text-[11px] tracking-wide border border-border rounded-full px-2.5 py-0.5 text-muted-foreground"
+          >
+            {r}
+          </span>
+        ))}
+      </div>
+    </button>
+
+    {/* Inline detail on small screens */}
+    {active && (
+      <div className="lg:hidden mt-1 mb-4 pl-4 border-l-2 border-border">
+        <Detail item={item} />
+      </div>
+    )}
+  </div>
+);
+
+/* ── Page ── */
+const Work = () => {
+  const [active, setActive] = useState<string>("almedia");
+  const [activeFilters, setActiveFilters] = useState<Role[]>([]);
+
+  const toggleFilter = (role: Role) =>
+    setActiveFilters((prev) =>
       prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
     );
 
   const matches = (roles: Role[]) =>
-    active.length === 0 || roles.some((r) => active.includes(r));
+    activeFilters.length === 0 || roles.some((r) => activeFilters.includes(r));
+
+  const activeItem = ALL.find((i) => i.id === active) ?? null;
+
+  const renderList = (title: string, items: Item[]) => (
+    <section className="mb-10">
+      <h2 className="text-2xl font-bold mb-2">{title}</h2>
+      <div className="divide-y divide-border">
+        {items.map((item) => (
+          <Row
+            key={item.id}
+            item={item}
+            active={active === item.id}
+            dimmed={!matches(item.roles)}
+            onActivate={() => setActive(item.id)}
+            onToggle={() => setActive((cur) => (cur === item.id ? "" : item.id))}
+          />
+        ))}
+      </div>
+    </section>
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
       <Nav />
 
-      <main className="container flex-1 pt-6 md:pt-10 max-w-4xl">
+      <main className="container flex-1 pt-6 md:pt-10">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">work + projects</h1>
 
-        {/* ── Filter ── */}
-        <div className="flex flex-wrap items-center gap-2.5 mb-12">
+        {/* Filter */}
+        <div className="flex flex-wrap items-center gap-2.5 mb-10">
           <span className="label-tag mr-1">filter by role:</span>
           {ROLES.map((role) => (
             <button
               key={role}
               type="button"
               className="role-pill"
-              data-active={active.includes(role)}
-              onClick={() => toggle(role)}
+              data-active={activeFilters.includes(role)}
+              onClick={() => toggleFilter(role)}
             >
               {role}
-              {active.includes(role) && <span aria-hidden>×</span>}
+              {activeFilters.includes(role) && <span aria-hidden>×</span>}
             </button>
           ))}
-          {active.length > 0 && (
+          {activeFilters.length > 0 && (
             <button
               type="button"
-              onClick={() => setActive([])}
+              onClick={() => setActiveFilters([])}
               className="text-sm text-muted-foreground hover:text-foreground story-link ml-1"
             >
               clear all ×
@@ -179,106 +372,35 @@ const Work = () => {
           )}
         </div>
 
-        {/* ── tl;dr ── */}
-        <section className="mb-14">
-          <p className="mb-4">
-            <span className="text-lg font-semibold">tl;dr</span>{" "}
-            <span className="label-tag">including but not limited to</span>
-          </p>
-          <p className="text-xl md:text-2xl leading-relaxed">
-            {tldr.map((c, i) => (
-              <span key={i} className={matches(c.roles) ? "" : "dimmed"}>
-                {c.node}
-                {i < tldr.length - 1 && (
-                  <span className="text-muted-foreground"> · </span>
-                )}
-              </span>
-            ))}
-          </p>
-        </section>
+        {/* Master / detail */}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-10 lg:gap-14">
+          {/* Left: lists */}
+          <div>
+            {renderList("experience", EXPERIENCE)}
+            {renderList("projects", PROJECTS)}
+            <p className="hidden lg:block text-xs text-muted-foreground mt-4">
+              hover an item to preview it →
+            </p>
+          </div>
 
-        {/* ── Experience ── */}
-        <WorkGroup title="experience" entries={experience} matches={matches} />
-
-        {/* ── Projects ── */}
-        <WorkGroup title="projects" entries={projects} matches={matches} />
+          {/* Right: sticky detail (desktop) */}
+          <div className="hidden lg:block">
+            <div className="sticky top-8 max-h-[calc(100vh-6rem)] overflow-auto pr-1">
+              {activeItem ? (
+                <Detail item={activeItem} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  hover an experience or project to see the details.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </main>
 
       <SiteFooter />
     </div>
   );
 };
-
-/* ── Group of entries ── */
-const WorkGroup = ({
-  title,
-  entries,
-  matches,
-}: {
-  title: string;
-  entries: Entry[];
-  matches: (roles: Role[]) => boolean;
-}) => (
-  <section className="mb-14">
-    <h2 className="text-2xl font-bold mb-2">{title}</h2>
-    <div className="divide-y divide-border">
-      {entries.map((e) => {
-        const on = matches(e.roles);
-        return (
-          <article
-            key={e.org}
-            className={`py-6 transition-opacity duration-300 ${
-              on ? "opacity-100" : "opacity-30"
-            }`}
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <h3 className="text-lg">
-                {e.href ? (
-                  <a
-                    href={e.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold story-link"
-                  >
-                    {e.org}
-                  </a>
-                ) : (
-                  <span className="font-semibold">{e.org}</span>
-                )}{" "}
-                <span className="text-muted-foreground italic text-base">
-                  · {e.title}
-                </span>
-              </h3>
-              <span className="label-tag">{e.meta}</span>
-            </div>
-
-            <ul className="mt-3 space-y-1.5">
-              {e.bullets.map((b, i) => (
-                <li
-                  key={i}
-                  className="text-[15px] text-muted-foreground leading-relaxed pl-4 relative"
-                >
-                  <span className="absolute left-0">–</span>
-                  {b}
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {e.roles.map((r) => (
-                <span
-                  key={r}
-                  className="text-[11px] tracking-wide border border-border rounded-full px-2.5 py-0.5 text-muted-foreground"
-                >
-                  {r}
-                </span>
-              ))}
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  </section>
-);
 
 export default Work;
