@@ -65,6 +65,7 @@ export default {
 			},
 			fontFamily: {
 				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				hand: ['Caveat', 'ui-sans-serif', 'cursive'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
