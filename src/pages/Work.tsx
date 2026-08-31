@@ -18,8 +18,9 @@ type Media = { type: "image" | "video" | "youtube"; src: string; alt: string };
 type Link = { label: string; href: string };
 
 type SubProject = {
-  name: string;
+  name?: string;
   desc: string;
+  stack?: string; // rendered as a "stack:" line under the description
   learnings: string[];
   media?: Media;
   note?: string; // small muted aside under the description
@@ -37,6 +38,7 @@ type Item = {
   blurb: string; // shown in the left-hand row
   detailLabel: string; // heading above the detail cards
   intro?: ReactNode; // context shown between the header and detailLabel
+  introLabel?: string; // optional label above the intro
   projects: SubProject[];
 };
 
@@ -176,11 +178,12 @@ const PROJECTS: Item[] = [
     id: "kotoflow",
     group: "projects",
     org: "kotoflow",
-    title: "conversational automation agent",
-    meta: "qlora · pytorch · tokyo hackathon",
+    title: "automation agent for non-technical workers",
+    meta: "mistral hackathon, tokyo (dec 2025)",
     roles: ["ai & ml"],
     blurb: "fine-tuned llama-3-8b to turn conversations into automations",
-    detailLabel: "about the project",
+    detailLabel: "the solution",
+    introLabel: "the problem",
     intro: (
       <>
         big companies and organizations are <em>slooow</em> in adopting ai (so
@@ -194,8 +197,8 @@ const PROJECTS: Item[] = [
     ),
     projects: [
       {
-        name: "kotoflow",
-        desc: "an agent that joins a call, elicits a worker's repetitive task from natural conversation, and generates a deployable automation. fine-tuned llama-3-8b with qlora (4-bit quantization + lora adapters) via transformers / peft on a t4 gpu.",
+        desc: "it starts with a call between a worker — say arlene from accounting — and the ai bot. arlene talks through the tasks she finds most daunting and repetitive, and the bot listens, asking follow-up question after follow-up question to understand exactly what she needs and tailoring the automation as the conversation goes. those many rounds of follow-ups are the whole point: they're what make the result fit her needs precisely. once the bot has gathered everything, it generates a ready-to-use workflow that arlene can run right away.",
+        stack: "fine-tuned llama-3-8b with qlora (4-bit quantization + lora adapters) via transformers / peft on a t4 gpu.",
         learnings: ["qlora", "fine-tuning", "pytorch", "agents"],
         media: { type: "youtube", src: "7jY0eB_O0vg", alt: "KotoFlow demo" },
         note: "built at a hackathon in tokyo — which is why some of the words are in japanese.",
@@ -221,16 +224,17 @@ const Detail = ({ item }: { item: Item }) => (
     </p>
 
     {item.intro && (
-      <p className="text-[15px] text-muted-foreground leading-relaxed mt-5">
-        {item.intro}
-      </p>
+      <div className="mt-6">
+        {item.introLabel && <p className="label-tag mb-2">{item.introLabel}</p>}
+        <p className="text-[15px] text-muted-foreground leading-relaxed">{item.intro}</p>
+      </div>
     )}
 
     <p className="label-tag mt-6 mb-4">{item.detailLabel}</p>
 
     <div className="space-y-7">
-      {item.projects.map((p) => (
-        <div key={p.name}>
+      {item.projects.map((p, i) => (
+        <div key={p.name ?? i}>
           {p.media &&
             (p.media.type === "youtube" ? (
               <div className="aspect-video w-full rounded-md border border-border overflow-hidden mb-3">
@@ -258,10 +262,17 @@ const Detail = ({ item }: { item: Item }) => (
               />
             ))}
 
-          <p className="text-[15px] font-semibold">{p.name}</p>
-          <p className="text-[15px] text-muted-foreground leading-relaxed mt-1.5">
+          {p.name && <p className="text-[15px] font-semibold">{p.name}</p>}
+          <p className={`text-[15px] text-muted-foreground leading-relaxed ${p.name ? "mt-1.5" : ""}`}>
             {p.desc}
           </p>
+
+          {p.stack && (
+            <p className="text-[15px] text-muted-foreground leading-relaxed mt-3">
+              <span className="font-semibold text-foreground">stack: </span>
+              {p.stack}
+            </p>
+          )}
 
           {p.note && (
             <p className="text-[13px] text-muted-foreground/80 italic mt-2">{p.note}</p>
