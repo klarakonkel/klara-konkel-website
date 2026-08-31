@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Nav from "@/components/layout/Nav";
 import SiteFooter from "@/components/layout/SiteFooter";
 import { getPublicUrl } from "@/lib/utils";
@@ -12,14 +12,19 @@ const ROLES = [
 ] as const;
 type Role = (typeof ROLES)[number];
 
-type Media = { type: "image" | "video"; src: string; alt: string };
+// `youtube` src is a video id; it renders as an embedded player.
+type Media = { type: "image" | "video" | "youtube"; src: string; alt: string };
+
+type Link = { label: string; href: string };
 
 type SubProject = {
   name: string;
   desc: string;
   learnings: string[];
   media?: Media;
-  href?: string;
+  note?: string; // small muted aside under the description
+  links?: Link[]; // demo / live / code links
+  href?: string; // legacy single "see code" link
 };
 
 type Item = {
@@ -31,6 +36,7 @@ type Item = {
   roles: Role[];
   blurb: string; // shown in the left-hand row
   detailLabel: string; // heading above the detail cards
+  intro?: ReactNode; // context shown between the header and detailLabel
   projects: SubProject[];
 };
 
@@ -167,19 +173,36 @@ const PROJECTS: Item[] = [
     ],
   },
   {
-    id: "aigency",
+    id: "kotoflow",
     group: "projects",
-    org: "aigency",
+    org: "kotoflow",
     title: "conversational automation agent",
-    meta: "qlora · pytorch · hugging face hackathon",
+    meta: "qlora · pytorch · tokyo hackathon",
     roles: ["ai & ml"],
     blurb: "fine-tuned llama-3-8b to turn conversations into automations",
     detailLabel: "about the project",
+    intro: (
+      <>
+        big companies and organizations are <em>slooow</em> in adopting ai (so
+        many opportunities to make processes more effective!), and most
+        non-technical people (like your coworkers fred in accounting or amanda in
+        hr) don&apos;t know how to squeeze the most out of it. they{" "}
+        <em>might</em> be talking to a chatgpt or claude and <em>maybe</em> use it
+        to write emails — but can&apos;t actually automate the tasks that are
+        boring and repetitive.
+      </>
+    ),
     projects: [
       {
-        name: "aigency",
-        desc: "hugging face hackathon (dec 2025): an agent that joins a call, elicits a worker's repetitive task from natural conversation, and generates a deployable automation. fine-tuned llama-3-8b with qlora (4-bit quantization + lora adapters) via transformers / peft on a t4 gpu.",
+        name: "kotoflow",
+        desc: "an agent that joins a call, elicits a worker's repetitive task from natural conversation, and generates a deployable automation. fine-tuned llama-3-8b with qlora (4-bit quantization + lora adapters) via transformers / peft on a t4 gpu.",
         learnings: ["qlora", "fine-tuning", "pytorch", "agents"],
+        media: { type: "youtube", src: "7jY0eB_O0vg", alt: "KotoFlow demo" },
+        note: "built at a hackathon in tokyo — which is why some of the words are in japanese.",
+        links: [
+          { label: "watch the demo", href: "https://www.youtube.com/watch?v=7jY0eB_O0vg" },
+          { label: "try it out", href: "https://mistral-hackathon-klara-koki.vercel.app/" },
+        ],
       },
     ],
   },
@@ -197,13 +220,30 @@ const Detail = ({ item }: { item: Item }) => (
       {item.meta && <> · {item.meta}</>}
     </p>
 
+    {item.intro && (
+      <p className="text-[15px] text-muted-foreground leading-relaxed mt-5">
+        {item.intro}
+      </p>
+    )}
+
     <p className="label-tag mt-6 mb-4">{item.detailLabel}</p>
 
     <div className="space-y-7">
       {item.projects.map((p) => (
         <div key={p.name}>
           {p.media &&
-            (p.media.type === "video" ? (
+            (p.media.type === "youtube" ? (
+              <div className="aspect-video w-full rounded-md border border-border overflow-hidden mb-3">
+                <iframe
+                  src={`https://www.youtube.com/embed/${p.media.src}`}
+                  title={p.media.alt}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            ) : p.media.type === "video" ? (
               <video
                 src={getPublicUrl(p.media.src)}
                 controls
@@ -222,6 +262,10 @@ const Detail = ({ item }: { item: Item }) => (
           <p className="text-[15px] text-muted-foreground leading-relaxed mt-1.5">
             {p.desc}
           </p>
+
+          {p.note && (
+            <p className="text-[13px] text-muted-foreground/80 italic mt-2">{p.note}</p>
+          )}
 
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             <span className="label-tag mr-1">learnings</span>
@@ -244,6 +288,22 @@ const Detail = ({ item }: { item: Item }) => (
             >
               see code →
             </a>
+          )}
+
+          {p.links && (
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+              {p.links.map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm story-link text-foreground"
+                >
+                  {l.label} →
+                </a>
+              ))}
+            </div>
           )}
         </div>
       ))}
