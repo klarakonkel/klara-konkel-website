@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Nav from "@/components/layout/Nav";
 import SiteFooter from "@/components/layout/SiteFooter";
 import { getPublicUrl } from "@/lib/utils";
@@ -90,7 +90,7 @@ const PROJECTS: Item[] = [
     group: "projects",
     org: "context",
     title: "real-time cultural interpreter",
-    meta: "hackathon, tokyo",
+    meta: "elevenlabs hackathon, tokyo",
     roles: ["product", "ai & ml"],
     blurb: "surfaces implicit cultural cues during international calls",
     detailLabel: "the solution",
@@ -326,22 +326,24 @@ const Row = ({
   active,
   opened,
   dimmed,
-  onHover,
   onToggle,
+  onEnter,
+  onLeave,
 }: {
   item: Item;
   active: boolean;
   opened: boolean;
   dimmed: boolean;
-  onHover: () => void;
   onToggle: () => void;
+  onEnter: () => void;
+  onLeave: () => void;
 }) => (
   <div className={dimmed ? "opacity-30 transition-opacity" : "transition-opacity"}>
     <button
       type="button"
-      onMouseEnter={onHover}
-      onFocus={onHover}
       onClick={onToggle}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
       className={`w-full text-left py-4 pl-4 -ml-4 border-l-2 transition-colors ${
         active
           ? "border-foreground"
@@ -379,9 +381,24 @@ const Row = ({
 
 /* ── Page ── */
 const Work = () => {
-  const [hovered, setHovered] = useState<string>(""); // drives the floating panel (xl+)
-  const [opened, setOpened] = useState<string>(""); // drives inline expand (below xl)
+  const [openPanel, setOpenPanel] = useState<string | null>(null); // floating drawer (xl+)
+  const [openInline, setOpenInline] = useState<string | null>(null); // inline expand (below xl)
   const [activeFilters, setActiveFilters] = useState<Role[]>([]);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpenPanel(null), 180);
+  };
+
+  const toggle = (id: string) => {
+    cancelClose();
+    setOpenPanel((cur) => (cur === id ? null : id));
+    setOpenInline((cur) => (cur === id ? null : id));
+  };
 
   const toggleFilter = (role: Role) =>
     setActiveFilters((prev) =>
@@ -391,7 +408,7 @@ const Work = () => {
   const matches = (roles: Role[]) =>
     activeFilters.length === 0 || roles.some((r) => activeFilters.includes(r));
 
-  const hoveredItem = ALL.find((i) => i.id === hovered) ?? null;
+  const panelItem = ALL.find((i) => i.id === openPanel) ?? null;
 
   const renderList = (title: string, items: Item[]) => (
     <section className="mb-10">
@@ -401,11 +418,12 @@ const Work = () => {
           <Row
             key={item.id}
             item={item}
-            active={hovered === item.id || opened === item.id}
-            opened={opened === item.id}
+            active={openPanel === item.id || openInline === item.id}
+            opened={openInline === item.id}
             dimmed={!matches(item.roles)}
-            onHover={() => setHovered(item.id)}
-            onToggle={() => setOpened((cur) => (cur === item.id ? "" : item.id))}
+            onToggle={() => toggle(item.id)}
+            onEnter={cancelClose}
+            onLeave={scheduleClose}
           />
         ))}
       </div>
@@ -417,51 +435,54 @@ const Work = () => {
       <Nav />
 
       <main className="container flex-1 pt-6 md:pt-10">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">work + projects</h1>
+        {/* Centered column */}
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">work + projects</h1>
 
-        {/* Filter */}
-        <div className="flex flex-wrap items-center gap-2.5 mb-10">
-          <span className="label-tag mr-1">filter by role:</span>
-          {ROLES.map((role) => (
-            <button
-              key={role}
-              type="button"
-              className="role-pill"
-              data-active={activeFilters.includes(role)}
-              onClick={() => toggleFilter(role)}
-            >
-              {role}
-              {activeFilters.includes(role) && <span aria-hidden>×</span>}
-            </button>
-          ))}
-          {activeFilters.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setActiveFilters([])}
-              className="text-sm text-muted-foreground hover:text-foreground story-link ml-1"
-            >
-              clear all ×
-            </button>
-          )}
-        </div>
+          {/* Filter */}
+          <div className="flex flex-wrap items-center gap-2.5 mb-10">
+            <span className="label-tag mr-1">filter by role:</span>
+            {ROLES.map((role) => (
+              <button
+                key={role}
+                type="button"
+                className="role-pill"
+                data-active={activeFilters.includes(role)}
+                onClick={() => toggleFilter(role)}
+              >
+                {role}
+                {activeFilters.includes(role) && <span aria-hidden>×</span>}
+              </button>
+            ))}
+            {activeFilters.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveFilters([])}
+                className="text-sm text-muted-foreground hover:text-foreground story-link ml-1"
+              >
+                clear all ×
+              </button>
+            )}
+          </div>
 
-        {/* Single-column list */}
-        <div className="max-w-2xl">
           {renderList("experience", EXPERIENCE)}
           {renderList("projects", PROJECTS)}
           <p className="hidden xl:block text-xs text-muted-foreground mt-2">
-            hover an item to see the details →
+            click an item to see the details →
           </p>
         </div>
 
-        {/* Floating detail panel — appears on hover (xl+) */}
-        {hoveredItem && (
+        {/* Detail drawer — opens on click, stays while hovered, hides on mouse-out (xl+) */}
+        {panelItem && (
           <aside
-            className="hidden xl:block fixed top-24 right-8 w-[370px]
-              max-h-[calc(100vh-7rem)] overflow-auto z-40
-              bg-background border border-border rounded-lg shadow-xl p-6"
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+            className="hidden xl:block fixed top-24 right-0 w-[min(620px,50vw)]
+              max-h-[calc(100vh-8rem)] overflow-auto z-40
+              bg-background border border-border rounded-l-xl shadow-2xl p-8
+              animate-fade-in"
           >
-            <Detail item={hoveredItem} />
+            <Detail item={panelItem} />
           </aside>
         )}
       </main>
