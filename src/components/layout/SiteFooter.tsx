@@ -1,10 +1,7 @@
-import { getPublicUrl } from "@/lib/utils";
-
 const socials = [
   { label: "linkedin", href: "https://linkedin.com/in/klara-konkel", external: true },
   { label: "github", href: "https://github.com/klarakonkel", external: true },
   { label: "email", href: "mailto:klaraa.konkel@gmail.com", external: false },
-  { label: "résumé", href: getPublicUrl("/resume.pdf"), external: true },
 ];
 
 const SiteFooter = () => (
